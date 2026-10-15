@@ -76,10 +76,13 @@
     <label>Minimum event area: <output id="areaOut">&ge; 0 km&sup2;</output></label>
     <input type="range" id="areaMin" min="0" max="500" step="10" value="0">
   </div>
+  <div class="row" style="display:flex; gap:10px; align-items:center;">
+    <button id="playBtn" title="Play timeline 2000-2026" style="cursor:pointer;font-size:14px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;">&#9654;</button>
+    <label style="margin:0;"><input type="checkbox" id="heatToggle" style="width:auto;"> heatmap view</label>
+  </div>
   <canvas id="yrChart"></canvas>
   <div id="legend">
-    <div class="bar"></div>
-    <div class="ends"><span>2000</span><span>event year</span><span>2026</span></div>
+    <div style="font-size:11px;">Flood events (blue) &mdash; overlapping areas darken where floods cluster.</div>
   </div>
 </div>
 <div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap: <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></div>
@@ -103,7 +106,7 @@
     Dataset: <a href="https://doi.org/10.5281/zenodo.18647054">doi.org/10.5281/zenodo.18647054</a> (CC BY 4.0).<br>
     Catalog entry: <a href="https://gee-community-catalog.org/projects/groundsource/">gee-community-catalog.org/projects/groundsource</a></p>
     <h4>Map notes</h4>
-    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. Colors encode event start year.</p>
+    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. The heatmap view aggregates event centroids weighted by flooded area. The play button animates the year filter from 2000 to 2026.</p>
   </div>
 </div>
 
@@ -124,18 +127,34 @@ map.on("load", () => {
     type: "vector",
     url: "pmtiles://thailand_floods.pmtiles"
   });
+  map.addSource("heat", {
+    type: "vector",
+    url: "pmtiles://thailand_heat.pmtiles"
+  });
   map.addLayer({
     id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
     paint: {
-      "fill-color": ["interpolate", ["linear"], ["get", "yr"],
-        2000, "#2166ac", 2008, "#67a9cf", 2014, "#d1e5f0",
-        2018, "#fddbc7", 2022, "#ef8a62", 2026, "#b2182b"],
-      "fill-opacity": 0.55
+      "fill-color": "#1d6fd1",
+      "fill-opacity": 0.45
     }
   });
   map.addLayer({
     id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
-    paint: { "line-color": "#7a1f1f", "line-width": 0.6, "line-opacity": 0.7 }
+    paint: { "line-color": "#0d3f8a", "line-width": 0.5, "line-opacity": 0.6 }
+  });
+  map.addLayer({
+    id: "flood-heat", type: "heatmap", source: "heat", "source-layer": "pts",
+    layout: { visibility: "none" },
+    paint: {
+      "heatmap-weight": ["interpolate", ["linear"], ["get", "area"], 0, 0.2, 500, 1],
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 3, 1, 9, 3],
+      "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"],
+        0, "rgba(33,102,172,0)", 0.2, "rgb(103,169,207)",
+        0.4, "rgb(209,229,240)", 0.6, "rgb(253,219,199)",
+        0.8, "rgb(239,138,98)", 1, "rgb(178,24,43)"],
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 3, 12, 9, 30],
+      "heatmap-opacity": 0.85
+    }
   });
   applyFilters();
 });
@@ -159,10 +178,38 @@ function applyFilters() {
   const f = ["all",
     [">=", ["get", "yr"], y0], ["<=", ["get", "yr"], y1],
     [">=", ["get", "area"], a0]];
-  map.setFilter("flood-fill", f);
-  map.setFilter("flood-line", f);
+  for (const lid of ["flood-fill", "flood-line", "flood-heat"]) {
+    if (map.getLayer(lid)) map.setFilter(lid, f);
+  }
 }
-yrFrom.onchange = yrTo.onchange = areaMin.oninput = applyFilters;
+yrFrom.onchange = yrTo.onchange = areaMin.oninput = () => { stopPlay(); applyFilters(); };
+
+// ---- heatmap toggle ----
+const heatToggle = document.getElementById("heatToggle");
+heatToggle.onchange = () => {
+  const v = heatToggle.checked ? "visible" : "none";
+  map.setLayoutProperty("flood-heat", "visibility", v);
+  const pv = heatToggle.checked ? "none" : "visible";
+  map.setLayoutProperty("flood-fill", "visibility", pv);
+  map.setLayoutProperty("flood-line", "visibility", pv);
+};
+
+// ---- time play ----
+let playTimer = null;
+const playBtn = document.getElementById("playBtn");
+function stopPlay() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.textContent = "\u25b6"; }
+}
+playBtn.onclick = () => {
+  if (playTimer) { stopPlay(); return; }
+  yrFrom.value = 2000; yrTo.value = 2000; applyFilters();
+  playBtn.textContent = "\u23f8";
+  playTimer = setInterval(() => {
+    let y = +yrTo.value + 1;
+    if (y > 2026) { stopPlay(); return; }
+    yrTo.value = y; applyFilters();
+  }, 450);
+};
 
 // ---- popup ----
 map.on("click", "flood-fill", (e) => {
