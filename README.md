@@ -1,11 +1,11 @@
 # Thailand Flood Events — Groundsource
 
-Interactive map of **99,197 flood events in Thailand (2000–2026)** from the [Groundsource](https://gee-community-catalog.org/projects/groundsource/) global dataset. Live site: `https://gain9999.github.io/thai-groundsource/`
+Interactive map of **70,795 flood events in Thailand (2000–2026)** from the [Groundsource](https://gee-community-catalog.org/projects/groundsource/) global dataset. Live site: `https://gain9999.github.io/thai-groundsource/`
 
 ## What's here
 
 - `index.html` — MapLibre viewer (PMTiles vector tiles, dynamic per-viewport loading)
-- `thailand_floods.pmtiles` — 99,197 flood polygons, zoom levels 4–10 (11 MB)
+- `thailand_floods.pmtiles` — 70,795 flood polygons, zoom levels 4–10 (8.0 MB)
 - `stats.json` — per-year event counts
 
 ## Features
@@ -18,7 +18,7 @@ Interactive map of **99,197 flood events in Thailand (2000–2026)** from the [G
 
 ## Data
 
-Thailand subset extracted from `groundsource_2026.parquet` (2,646,302 global events), bounding box 97–106°E, 5.5–20.5°N. Date range of the extract: 2000-11-20 to 2026-01-25.
+Thailand subset extracted from `groundsource_2026.parquet` (2,646,302 global events), bounding box 97–106°E, 5.5–20.5°N, then clipped to Thailand's GADM country boundary: 28,402 events falling entirely outside Thailand (neighboring countries, sea) were removed, leaving 70,795. Date range: 2000-11-20 to 2026-01-26.
 
 Each event: polygon boundary (WGS 84), start/end date, area in km². The dataset is **entity-based, not meteorology-based** — one large flood may appear as multiple entries for different reported places.
 
