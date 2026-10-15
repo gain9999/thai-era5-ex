@@ -146,14 +146,21 @@ map.on("load", () => {
     id: "flood-heat", type: "heatmap", source: "heat", "source-layer": "pts",
     layout: { visibility: "none" },
     paint: {
-      "heatmap-weight": ["interpolate", ["linear"], ["get", "area"], 0, 0.2, 500, 1],
-      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 3, 1, 9, 3],
+      // uniform weight: hotspot = where floods are reported, not how big
+      "heatmap-weight": 0.5,
+      // low intensity at country zoom: tames the 1000x Bangkok-vs-rural density ratio
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 3, 0.25, 8, 1.2],
+      // most color stops in the low-density range so secondary hotspots differentiate
       "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"],
-        0, "rgba(33,102,172,0)", 0.2, "rgb(103,169,207)",
-        0.4, "rgb(209,229,240)", 0.6, "rgb(253,219,199)",
-        0.8, "rgb(239,138,98)", 1, "rgb(178,24,43)"],
-      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 3, 12, 9, 30],
-      "heatmap-opacity": 0.85
+        0, "rgba(0,0,0,0)",
+        0.03, "#fee5d9",
+        0.08, "#fcae91",
+        0.18, "#fb6a4a",
+        0.35, "#ef3b2c",
+        0.6, "#cb181d",
+        1, "#99000d"],
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 3, 20, 8, 35],
+      "heatmap-opacity": 0.9
     }
   });
   applyFilters();
