@@ -79,7 +79,7 @@
     <input type="range" id="areaMin" min="0" max="500" step="10" value="0">
   </div>
   <div class="row" style="display:flex; gap:10px; align-items:center;">
-    <button id="playBtn" title="Play timeline 2000-2026" style="cursor:pointer;font-size:14px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;">&#9654;</button>
+    <button id="playBtn" title="Play month-by-month (Nov 2000 - Jan 2026)" style="cursor:pointer;font-size:14px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;">&#9654;</button>
     <label style="margin:0;"><input type="checkbox" id="heatToggle" style="width:auto;"> frequency grid</label>
   </div>
   <canvas id="yrChart"></canvas>
@@ -119,7 +119,7 @@
     Dataset: <a href="https://doi.org/10.5281/zenodo.18647054">doi.org/10.5281/zenodo.18647054</a> (CC BY 4.0).<br>
     Catalog entry: <a href="https://gee-community-catalog.org/projects/groundsource/">gee-community-catalog.org/projects/groundsource</a></p>
     <h4>Map notes</h4>
-    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. Polygons are colored by event duration: 1-day (flash-like, the closest proxy to flash-flood labels), 2&ndash;3 days, and 4+ days (lingering riverine). The frequency-grid view counts events per 0.25&deg; cell on a log color scale &mdash; an absolute scale, so hotspots read the same at any zoom. The play button animates the year filter from 2000 to 2026.</p>
+    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. Polygons are colored by event duration: 1-day (flash-like, the closest proxy to flash-flood labels), 2&ndash;3 days, and 4+ days (lingering riverine). The frequency-grid view counts events per 0.25&deg; cell on a log color scale &mdash; an absolute scale, so hotspots read the same at any zoom. The play button steps month by month from Nov 2000 to Jan 2026, showing only events active during each month (events appear when they start and disappear when they end).</p>
   </div>
 </div>
 
@@ -220,21 +220,47 @@ heatToggle.onchange = () => {
   document.getElementById("hexLegend").style.display = heatToggle.checked ? "block" : "none";
 };
 
-// ---- time play ----
+// ---- time play: steps month by month, showing only events active that month ----
 let playTimer = null;
+let playYM = null; // [year, month] while playing, else null
 const playBtn = document.getElementById("playBtn");
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const PLAY_START = [2000, 11], PLAY_END = [2026, 1]; // data range
+const ymStr = (y, m) => y + "-" + String(m).padStart(2, "0");
+
+function applyPlayFilter() {
+  const [y, m] = playYM;
+  const cur = ymStr(y, m);
+  yrOut.textContent = MONTHS[m - 1] + " " + y;
+  const a0 = +areaMin.value;
+  // event visible only while it lasts: its [start,end] overlaps the current month
+  const f = ["all",
+    ["<=", ["slice", ["get", "sd"], 0, 7], cur],
+    [">=", ["slice", ["get", "ed"], 0, 7], cur],
+    [">=", ["get", "area"], a0]];
+  for (const lid of ["flood-fill", "flood-line"]) {
+    if (map.getLayer(lid)) map.setFilter(lid, f);
+  }
+  if (map.getLayer("flood-hex")) map.setFilter("flood-hex", ["==", ["get", "yr"], y]);
+}
 function stopPlay() {
-  if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.textContent = "\u25b6"; }
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  if (playYM) { playYM = null; applyFilters(); }
+  playBtn.textContent = "\u25b6";
 }
 playBtn.onclick = () => {
   if (playTimer) { stopPlay(); return; }
-  yrFrom.value = 2000; yrTo.value = 2000; applyFilters();
+  playYM = PLAY_START.slice();
+  applyPlayFilter();
   playBtn.textContent = "\u23f8";
   playTimer = setInterval(() => {
-    let y = +yrTo.value + 1;
-    if (y > 2026) { stopPlay(); return; }
-    yrTo.value = y; applyFilters();
-  }, 450);
+    let [y, m] = playYM;
+    m++;
+    if (m > 12) { m = 1; y++; }
+    if (y > PLAY_END[0] || (y === PLAY_END[0] && m > PLAY_END[1])) { stopPlay(); return; }
+    playYM = [y, m];
+    applyPlayFilter();
+  }, 150);
 };
 
 // ---- popup ----
