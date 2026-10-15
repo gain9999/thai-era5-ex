@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thailand Flood Events — Groundsource</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+  #map { position: absolute; inset: 0; }
+  #panel {
+    position: absolute; top: 12px; left: 12px; z-index: 10;
+    background: rgba(255,255,255,0.95); border-radius: 10px;
+    padding: 10px 14px; font-size: 13px; line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); max-width: 340px;
+  }
+  #panel b { font-size: 14px; }
+  #panel .sub { color: #555; font-size: 12px; }
+  #panel .row { margin: 8px 0 2px; }
+  #panel label { font-size: 12px; color: #333; display: block; margin-bottom: 2px; }
+  #panel select, #panel input[type=range] { width: 100%; font-size: 13px; }
+  #panel output { font-size: 12px; color: #555; }
+  #yrChart { width: 100%; height: 90px; margin-top: 6px; }
+  #legend { margin-top: 8px; font-size: 11px; color: #555; }
+  #legend .bar { height: 10px; border-radius: 3px; margin: 2px 0;
+    background: linear-gradient(to right, #2166ac, #67a9cf, #fddbc7, #ef8a62, #b2182b); }
+  #legend .ends { display: flex; justify-content: space-between; }
+  #infoBtn {
+    float: right; cursor: pointer; font-size: 16px; line-height: 1;
+    width: 22px; height: 22px; text-align: center; border-radius: 50%;
+    background: #eee; color: #333; border: 1px solid #ccc; padding: 0;
+  }
+  #infoBtn:hover { background: #ddd; }
+  #infoModal {
+    display: none; position: fixed; z-index: 100; left: 0; top: 0;
+    width: 100%; height: 100%; background: rgba(0,0,0,0.4);
+  }
+  #infoContent {
+    background: #fff; margin: 6% auto; padding: 20px 24px; border-radius: 10px;
+    max-width: 560px; max-height: 80%; overflow-y: auto;
+    font-size: 13px; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  #infoContent h3 { margin: 0 0 8px; font-size: 15px; }
+  #infoContent h4 { margin: 14px 0 4px; font-size: 13px; }
+  #infoContent p, #infoContent li { margin: 4px 0; }
+  #infoContent ul { padding-left: 18px; }
+  #infoContent code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  #infoClose { float: right; cursor: pointer; font-size: 18px; color: #888; }
+  #infoClose:hover { color: #333; }
+  #attrib {
+    position: absolute; bottom: 0; right: 0; z-index: 10;
+    background: rgba(255,255,255,0.85); font-size: 10px; color: #555;
+    padding: 2px 6px; border-radius: 4px 0 0 0;
+  }
+  #attrib a { color: #555; }
+  .maplibregl-popup-content { font-size: 13px; line-height: 1.5; }
+  .maplibregl-popup-content b { font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <button id="infoBtn" title="About this data">&#9432;</button>
+  <b>Thailand Flood Events</b><br>
+  <span class="sub">Groundsource &mdash; 99,197 events, 2000&ndash;2026<br>LLM-extracted from news reports</span>
+  <div class="row">
+    <label>Year range: <output id="yrOut">2000 &ndash; 2026</output></label>
+    <div style="display:flex; gap:8px;">
+      <select id="yrFrom" style="flex:1"></select>
+      <select id="yrTo" style="flex:1"></select>
+    </div>
+  </div>
+  <div class="row">
+    <label>Minimum event area: <output id="areaOut">&ge; 0 km&sup2;</output></label>
+    <input type="range" id="areaMin" min="0" max="500" step="10" value="0">
+  </div>
+  <canvas id="yrChart"></canvas>
+  <div id="legend">
+    <div class="bar"></div>
+    <div class="ends"><span>2000</span><span>event year</span><span>2026</span></div>
+  </div>
+</div>
+<div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a></div>
+
+<div id="infoModal">
+  <div id="infoContent">
+    <span id="infoClose">&times;</span>
+    <h3>About this data</h3>
+    <p><b>Groundsource: A Global Dataset of Flood Events from News.</b> 2,646,302 flood events worldwide extracted from 5M+ news articles (80 languages) using Gemini LLMs, geocoded via Google Maps. This site shows the 99,197 events in Thailand (2000-11-20 to 2026-01-25).</p>
+    <h4>What each event is</h4>
+    <p>One row = one spatiotemporal flood observation: a polygon (administrative area or buffered point) with start/end dates and area in km&sup2;. The dataset is <b>entity-based, not meteorology-based</b> &mdash; one large flood can appear as many entries for different reported places.</p>
+    <h4>Known biases</h4>
+    <ul>
+      <li><b>Recency bias:</b> ~64% of events are 2020&ndash;2025 (more digitized news, not more floods).</li>
+      <li><b>Media bias:</b> coverage follows digital news infrastructure; recall is lower where local news is sparse.</li>
+      <li><b>Severity bias:</b> high-impact events are over-represented vs. minor ones.</li>
+      <li>Geocoding errors may cluster by region/language.</li>
+    </ul>
+    <h4>Citation</h4>
+    <p>Mayo, R. et al. (2026). <i>Groundsource: A Dataset of Flood Events from News.</i> EarthArXiv. Unreviewed preprint.<br>
+    Dataset: <a href="https://doi.org/10.5281/zenodo.18647054">doi.org/10.5281/zenodo.18647054</a> (CC BY 4.0).<br>
+    Catalog entry: <a href="https://gee-community-catalog.org/projects/groundsource/">gee-community-catalog.org/projects/groundsource</a></p>
+    <h4>Map notes</h4>
+    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. Colors encode event start year.</p>
+  </div>
+</div>
+
+<script>
+const protocol = new pmtiles.Protocol();
+maplibregl.addProtocol("pmtiles", protocol);
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: {
+    version: 8,
+    sources: {
+      basemap: {
+        type: "raster",
+        tiles: ["https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        attribution: "OSM CARTO",
+        maxzoom: 19
+      },
+      floods: {
+        type: "vector",
+        url: "pmtiles://thailand_floods.pmtiles"
+      }
+    },
+    layers: [
+      { id: "basemap", type: "raster", source: "basemap" },
+      {
+        id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
+        paint: {
+          "fill-color": ["interpolate", ["linear"], ["get", "yr"],
+            2000, "#2166ac", 2008, "#67a9cf", 2014, "#d1e5f0",
+            2018, "#fddbc7", 2022, "#ef8a62", 2026, "#b2182b"],
+          "fill-opacity": 0.55
+        }
+      },
+      {
+        id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
+        paint: { "line-color": "#7a1f1f", "line-width": 0.6, "line-opacity": 0.7 }
+      }
+    ]
+  },
+  center: [100.9, 14.2],
+  zoom: 5.5
+});
+map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+// ---- filters ----
+const yrFrom = document.getElementById("yrFrom");
+const yrTo = document.getElementById("yrTo");
+const areaMin = document.getElementById("areaMin");
+const yrOut = document.getElementById("yrOut");
+const areaOut = document.getElementById("areaOut");
+for (let y = 2000; y <= 2026; y++) {
+  yrFrom.add(new Option(y, y));
+  yrTo.add(new Option(y, y));
+}
+yrFrom.value = 2000; yrTo.value = 2026;
+
+function applyFilters() {
+  const y0 = +yrFrom.value, y1 = +yrTo.value, a0 = +areaMin.value;
+  yrOut.textContent = y0 + " \u2013 " + y1;
+  areaOut.innerHTML = "\u2265 " + a0 + " km\u00b2";
+  const f = ["all",
+    [">=", ["get", "yr"], y0], ["<=", ["get", "yr"], y1],
+    [">=", ["get", "area"], a0]];
+  map.setFilter("flood-fill", f);
+  map.setFilter("flood-line", f);
+}
+yrFrom.onchange = yrTo.onchange = areaMin.oninput = applyFilters;
+
+// ---- popup ----
+map.on("click", "flood-fill", (e) => {
+  const p = e.features[0].properties;
+  const d0 = new Date(p.sd), d1 = new Date(p.ed);
+  const dur = Math.round((d1 - d0) / 864e5) + 1;
+  new maplibregl.Popup()
+    .setLngLat(e.lngLat)
+    .setHTML("<b>Flood event</b><br>" +
+      "Start: " + p.sd + "<br>End: " + p.ed +
+      " (" + dur + " day" + (dur > 1 ? "s" : "") + ")<br>" +
+      "Area: " + Number(p.area).toLocaleString() + " km&sup2;")
+    .addTo(map);
+});
+map.on("mouseenter", "flood-fill", () => map.getCanvas().style.cursor = "pointer");
+map.on("mouseleave", "flood-fill", () => map.getCanvas().style.cursor = "");
+
+// ---- year chart ----
+fetch("stats.json").then(r => r.json()).then(stats => {
+  const c = document.getElementById("yrChart");
+  const ctx = c.getContext("2d");
+  const W = c.width = c.offsetWidth * 2, H = c.height = 180;
+  const yrs = stats.by_year;
+  const mx = Math.max(...yrs.map(d => d.n));
+  const bw = W / yrs.length;
+  yrs.forEach((d, i) => {
+    const h = (d.n / mx) * (H - 24);
+    const t = (d.yr - 2000) / 26;
+    ctx.fillStyle = "rgb(" + Math.round(33 + t * 146) + "," +
+      Math.round(102 - t * 84) + "," + Math.round(172 - t * 138) + ")";
+    ctx.fillRect(i * bw + 1, H - 18 - h, bw - 2, h);
+  });
+  ctx.fillStyle = "#666"; ctx.font = "18px system-ui";
+  ctx.fillText("2000", 2, H - 2);
+  ctx.fillText("2026", W - 52, H - 2);
+  ctx.fillText(stats.total.toLocaleString() + " events", 2, 20);
+});
+
+// ---- info modal ----
+const modal = document.getElementById("infoModal");
+document.getElementById("infoBtn").onclick = () => modal.style.display = "block";
+document.getElementById("infoClose").onclick = () => modal.style.display = "none";
+modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+</script>
+</body>
+</html>
