@@ -63,8 +63,10 @@
 <div id="map"></div>
 <div id="panel">
   <button id="infoBtn" title="About this data">&#9432;</button>
+  <button id="minBtn" title="Minimize panel" style="float:right;cursor:pointer;font-size:14px;line-height:1;width:22px;height:22px;text-align:center;border-radius:50%;background:#eee;color:#333;border:1px solid #ccc;padding:0;margin-left:8px;">&ndash;</button>
   <b>Thailand Flood Events</b><br>
-  <span class="sub">Groundsource &mdash; 70,795 events, 2000&ndash;2026<br>LLM-extracted from news reports</span>
+  <div id="panelBody">
+  <span class="sub">Groundsource &mdash; 99,197 events, 2000&ndash;2026<br>LLM-extracted from news reports</span>
   <div class="row">
     <label>Year range: <output id="yrOut">2000 &ndash; 2026</output></label>
     <div style="display:flex; gap:8px;">
@@ -83,6 +85,7 @@
   <canvas id="yrChart"></canvas>
   <div id="legend">
     <div style="font-size:11px;">Flood events (blue) &mdash; overlapping areas darken where floods cluster.</div>
+  </div>
   </div>
 </div>
 <div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap: <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></div>
@@ -253,6 +256,18 @@ fetch("stats.json").then(r => r.json()).then(stats => {
   ctx.fillText("2000", 2, H - 2);
   ctx.fillText("2026", W - 52, H - 2);
   ctx.fillText(stats.total.toLocaleString() + " events", 2, 20);
+});
+
+// ---- minimize panel ----
+const minBtn = document.getElementById("minBtn");
+const panelBody = document.getElementById("panelBody");
+const infoBtn = document.getElementById("infoBtn");
+minBtn.addEventListener("click", () => {
+  const hidden = panelBody.style.display === "none";
+  panelBody.style.display = hidden ? "block" : "none";
+  infoBtn.style.display = hidden ? "block" : "none";
+  minBtn.innerHTML = hidden ? "&ndash;" : "+";
+  minBtn.title = hidden ? "Minimize panel" : "Expand panel";
 });
 
 // ---- info modal ----
