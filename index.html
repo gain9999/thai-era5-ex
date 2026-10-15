@@ -323,22 +323,27 @@ modeFmean.onclick = () => setMode("fmean");
 function showPopup(e) {
   const p = e.features[0].properties;
   const v = varMeta();
-  // compute mean client-side: single play year, or the selected range
+  // single year or range mean, plus all-time max
   const y0 = playYear !== null ? playYear : yrFrom;
   const y1 = playYear !== null ? playYear : yrTo;
-  let sum = 0, n = 0;
-  for (let y = y0; y <= y1; y++) {
+  const single = (y0 === y1);
+  let sum = 0, n = 0, mx = -Infinity, mxY = null;
+  for (let y = 1950; y <= 2025; y++) {
     const val = p["y" + y];
-    if (val != null) { sum += val; n++; }
+    if (val == null) continue;
+    if (val > mx) { mx = val; mxY = y; }
+    if (y >= y0 && y <= y1) { sum += val; n++; }
   }
   const val = n ? sum / n : null;
   const anom = val != null ? val - p.clim : null;
   const s = anom > 0 ? "+" : "";
+  const label = single ? "Value" : "Mean";
   new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
     "<b>" + v.key + " " + rangeLabel() + "</b><br>" +
-    "Mean: " + fmt(val) + " " + v.unit + "<br>" +
+    label + ": " + fmt(val) + " " + v.unit + "<br>" +
     "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
-    "Anomaly: " + s + fmt(anom) + " " + v.unit
+    "Anomaly: " + s + fmt(anom) + " " + v.unit + "<br>" +
+    "Max (1950–2025): " + fmt(mx) + " " + v.unit + " (" + mxY + ")"
   ).addTo(map);
 }
 map.on("click", "grid_lo", showPopup);
