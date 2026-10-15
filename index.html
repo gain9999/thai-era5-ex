@@ -84,7 +84,12 @@
   </div>
   <canvas id="yrChart"></canvas>
   <div id="legend">
-    <div style="font-size:11px;">Flood events (blue) &mdash; overlapping areas darken where floods cluster.</div>
+    <div style="font-size:11px; margin-bottom:2px;">Event duration (flash-flood signal):</div>
+    <div style="display:flex; gap:10px; font-size:11px;">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#e6550d;border-radius:2px;"></span> 1 day &mdash; flash</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#3182bd;border-radius:2px;"></span> 2&ndash;3 days</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#6a51a3;border-radius:2px;"></span> 4+ days &mdash; lingering</span>
+    </div>
     <div id="hexLegend" style="display:none; margin-top:6px;">
       <div style="font-size:11px; margin-bottom:2px;">Events per 0.25&deg; cell (log scale):</div>
       <div style="height:10px; border-radius:3px; background:linear-gradient(to right, #fee5d9, #fcae91, #fb6a4a, #ef3b2c, #99000d);"></div>
@@ -114,7 +119,7 @@
     Dataset: <a href="https://doi.org/10.5281/zenodo.18647054">doi.org/10.5281/zenodo.18647054</a> (CC BY 4.0).<br>
     Catalog entry: <a href="https://gee-community-catalog.org/projects/groundsource/">gee-community-catalog.org/projects/groundsource</a></p>
     <h4>Map notes</h4>
-    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. The frequency-grid view counts events per 0.25&deg; cell on a log color scale &mdash; an absolute scale, so hotspots read the same at any zoom. The play button animates the year filter from 2000 to 2026.</p>
+    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. Polygons are colored by event duration: 1-day (flash-like, the closest proxy to flash-flood labels), 2&ndash;3 days, and 4+ days (lingering riverine). The frequency-grid view counts events per 0.25&deg; cell on a log color scale &mdash; an absolute scale, so hotspots read the same at any zoom. The play button animates the year filter from 2000 to 2026.</p>
   </div>
 </div>
 
@@ -142,13 +147,20 @@ map.on("load", () => {
   map.addLayer({
     id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
     paint: {
-      "fill-color": "#1d6fd1",
-      "fill-opacity": 0.45
+      // duration classes: flash (1d) vs short (2-3d) vs lingering (4d+) --
+      // the flash-flood-relevant split for ML training labels
+      "fill-color": [
+        "case",
+        ["==", ["get", "dur"], 1], "#e6550d",
+        ["<=", ["get", "dur"], 3], "#3182bd",
+        "#6a51a3"
+      ],
+      "fill-opacity": 0.55
     }
   });
   map.addLayer({
     id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
-    paint: { "line-color": "#0d3f8a", "line-width": 0.5, "line-opacity": 0.6 }
+    paint: { "line-color": "#333333", "line-width": 0.4, "line-opacity": 0.5 }
   });
   // frequency grid: absolute counts per 0.25-degree cell, log color scale.
   // fixed scale (not viewport-relative) so hotspots read the same at any zoom.
