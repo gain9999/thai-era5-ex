@@ -82,7 +82,7 @@
     <div class="ends"><span>2000</span><span>event year</span><span>2026</span></div>
   </div>
 </div>
-<div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap: Esri, HERE, Garmin, OpenStreetMap contributors</div>
+<div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap: <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></div>
 
 <div id="infoModal">
   <div id="infoContent">
@@ -113,42 +113,32 @@ maplibregl.addProtocol("pmtiles", protocol);
 
 const map = new maplibregl.Map({
   container: "map",
-  style: {
-    version: 8,
-    sources: {
-      basemap: {
-        type: "raster",
-        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
-        tileSize: 256,
-        attribution: "Esri",
-        maxzoom: 16
-      },
-      floods: {
-        type: "vector",
-        url: "pmtiles://thailand_floods.pmtiles"
-      }
-    },
-    layers: [
-      { id: "basemap", type: "raster", source: "basemap" },
-      {
-        id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
-        paint: {
-          "fill-color": ["interpolate", ["linear"], ["get", "yr"],
-            2000, "#2166ac", 2008, "#67a9cf", 2014, "#d1e5f0",
-            2018, "#fddbc7", 2022, "#ef8a62", 2026, "#b2182b"],
-          "fill-opacity": 0.55
-        }
-      },
-      {
-        id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
-        paint: { "line-color": "#7a1f1f", "line-width": 0.6, "line-opacity": 0.7 }
-      }
-    ]
-  },
+  style: "https://tiles.openfreemap.org/styles/positron",
   center: [100.9, 14.2],
   zoom: 5.5
 });
 map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+map.on("load", () => {
+  map.addSource("floods", {
+    type: "vector",
+    url: "pmtiles://thailand_floods.pmtiles"
+  });
+  map.addLayer({
+    id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
+    paint: {
+      "fill-color": ["interpolate", ["linear"], ["get", "yr"],
+        2000, "#2166ac", 2008, "#67a9cf", 2014, "#d1e5f0",
+        2018, "#fddbc7", 2022, "#ef8a62", 2026, "#b2182b"],
+      "fill-opacity": 0.55
+    }
+  });
+  map.addLayer({
+    id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
+    paint: { "line-color": "#7a1f1f", "line-width": 0.6, "line-opacity": 0.7 }
+  });
+  applyFilters();
+});
 
 // ---- filters ----
 const yrFrom = document.getElementById("yrFrom");
