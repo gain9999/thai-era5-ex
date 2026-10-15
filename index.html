@@ -61,7 +61,8 @@
     <input type="range" id="yrTo" min="1950" max="2025" step="1" value="2025">
   </div>
   <div class="btnrow">
-    <button id="playBtn" title="Play 1950-2025">&#9654;</button>
+    <button id="playBtn" title="Play through selected years">&#9654;</button>
+    <span id="playYearOut" style="min-width:5em;font-weight:bold;"></span>
     <button id="modeVal" class="active">Value</button>
     <button id="modeAnom" title="Difference from 1991-2020 mean">Anomaly</button>
     <button id="modeFmean" title="Mean over the full 1950-2025 period">Full Mean</button>
@@ -163,8 +164,10 @@ const SEQ = ["#ffffcc","#fed976","#fd8d3c","#e31a1c","#800026"];
 const DIV = ["#2166ac","#92c5de","#f7f7f7","#f4a582","#b2182b"];
 let mode = "value";
 let yrFrom = 1950, yrTo = 2025;
+let playYear = null; // set while playing: the single year currently shown
 function rangeMeanExpr() {
   // mean of y<yr> over [yrFrom, yrTo]; use precomputed fmean for the full span
+  if (playYear !== null) return ["get", "y" + playYear];
   if (yrFrom === 1950 && yrTo === 2025) return ["get", "fmean"];
   let sum = ["get", "y" + yrFrom];
   for (let y = yrFrom + 1; y <= yrTo; y++) sum = ["+", sum, ["get", "y" + y]];
@@ -247,6 +250,7 @@ const yrToEl = document.getElementById("yrTo");
 const yrFromOut = document.getElementById("yrFromOut");
 const yrToOut = document.getElementById("yrToOut");
 function rangeLabel() {
+  if (playYear !== null) return "" + playYear;
   return yrFrom === yrTo ? "" + yrFrom : yrFrom + "–" + yrTo;
 }
 function applyRange() {
@@ -264,8 +268,12 @@ yrToEl.oninput = () => { stopPlay(); applyRange(); };
 // ---- play ----
 let playTimer = null;
 const playBtn = document.getElementById("playBtn");
+const playYearOut = document.getElementById("playYearOut");
 function stopPlay() {
   if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.innerHTML = "&#9654;"; }
+  playYear = null;
+  playYearOut.textContent = "";
+  restyle();
 }
 function updatePlayState() {
   const disabled = (mode === "fmean");
@@ -275,16 +283,17 @@ function updatePlayState() {
 }
 playBtn.onclick = () => {
   if (playTimer) { stopPlay(); return; }
-  // play single years 1950->2025 regardless of current range
-  yrFromEl.value = 1950; yrToEl.value = 1950;
-  applyRange();
+  // animate single years through the selected [yrFrom, yrTo]; sliders stay put
+  playYear = yrFrom;
+  playYearOut.textContent = "▶ " + playYear;
+  restyle();
   playBtn.innerHTML = "&#10074;&#10074;";
   playTimer = setInterval(() => {
-    let y = yrTo + 1;
-    if (y > 2025) { stopPlay(); return; }
-    yrFromEl.value = y; yrToEl.value = y;
-    applyRange();
-  }, 200);
+    playYear++;
+    if (playYear > yrTo) { stopPlay(); return; }
+    playYearOut.textContent = "▶ " + playYear;
+    restyle();
+  }, 400);
 };
 
 // ---- mode ----
@@ -309,9 +318,11 @@ modeFmean.onclick = () => setMode("fmean");
 function showPopup(e) {
   const p = e.features[0].properties;
   const v = varMeta();
-  // compute range mean client-side from properties
+  // compute mean client-side: single play year, or the selected range
+  const y0 = playYear !== null ? playYear : yrFrom;
+  const y1 = playYear !== null ? playYear : yrTo;
   let sum = 0, n = 0;
-  for (let y = yrFrom; y <= yrTo; y++) {
+  for (let y = y0; y <= y1; y++) {
     const val = p["y" + y];
     if (val != null) { sum += val; n++; }
   }
