@@ -82,7 +82,7 @@
     <div class="ends"><span>2000</span><span>event year</span><span>2026</span></div>
   </div>
 </div>
-<div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a></div>
+<div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap: Esri, HERE, Garmin, OpenStreetMap contributors</div>
 
 <div id="infoModal">
   <div id="infoContent">
@@ -118,10 +118,10 @@ const map = new maplibregl.Map({
     sources: {
       basemap: {
         type: "raster",
-        tiles: ["https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"],
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
         tileSize: 256,
-        attribution: "OSM CARTO",
-        maxzoom: 19
+        attribution: "Esri",
+        maxzoom: 16
       },
       floods: {
         type: "vector",
