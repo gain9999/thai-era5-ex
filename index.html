@@ -53,8 +53,12 @@
   <select id="varSel"></select>
   <div id="explain"></div>
   <div class="row">
-    <label>Year: <output id="yrOut">2025</output></label>
-    <input type="range" id="yrSlider" min="1950" max="2025" step="1" value="2025">
+    <label>From: <output id="yrFromOut">1950</output></label>
+    <input type="range" id="yrFrom" min="1950" max="2025" step="1" value="1950">
+  </div>
+  <div class="row">
+    <label>To: <output id="yrToOut">2025</output></label>
+    <input type="range" id="yrTo" min="1950" max="2025" step="1" value="2025">
   </div>
   <div class="btnrow">
     <button id="playBtn" title="Play 1950-2025">&#9654;</button>
@@ -158,18 +162,28 @@ function updateExplain() {
 const SEQ = ["#ffffcc","#fed976","#fd8d3c","#e31a1c","#800026"];
 const DIV = ["#2166ac","#92c5de","#f7f7f7","#f4a582","#b2182b"];
 let mode = "value";
-let curYear = 2025;
-function yprop() { return "y" + curYear; }
+let yrFrom = 1950, yrTo = 2025;
+function rangeMeanExpr() {
+  // mean of y<yr> over [yrFrom, yrTo]; use precomputed fmean for the full span
+  if (yrFrom === 1950 && yrTo === 2025) return ["get", "fmean"];
+  let sum = ["get", "y" + yrFrom];
+  for (let y = yrFrom + 1; y <= yrTo; y++) sum = ["+", sum, ["get", "y" + y]];
+  const n = yrTo - yrFrom + 1;
+  return n === 1 ? sum : ["/", sum, n];
+}
 function paintFor(v) {
+  const valExpr = rangeMeanExpr();
   if (mode === "anomaly") {
     const a = v.amax || 1;
-    return ["interpolate", ["linear"], ["-", ["get", yprop()], ["get","clim"]],
+    return ["interpolate", ["linear"], ["-", valExpr, ["get","clim"]],
       -a, DIV[0], -a/2, DIV[1], 0, DIV[2], a/2, DIV[3], a, DIV[4]];
   }
-  const prop = mode === "fmean" ? "fmean" : yprop();
-  const lo = mode === "fmean" ? v.fmin : v.vmin;
-  const hi = mode === "fmean" ? v.fmax : v.vmax;
-  return ["interpolate", ["linear"], ["get", prop],
+  const isFull = (yrFrom === 1950 && yrTo === 2025);
+  const prop = mode === "fmean" ? "fmean" : null;
+  const lo = mode === "fmean" ? v.fmin : (isFull ? v.fmin : v.vmin);
+  const hi = mode === "fmean" ? v.fmax : (isFull ? v.fmax : v.vmax);
+  const expr = mode === "fmean" ? ["get", "fmean"] : valExpr;
+  return ["interpolate", ["linear"], expr,
     lo, SEQ[0], lo+(hi-lo)*0.25, SEQ[1], lo+(hi-lo)*0.5, SEQ[2],
     lo+(hi-lo)*0.75, SEQ[3], hi, SEQ[4]];
 }
@@ -218,7 +232,7 @@ function loadVariable() {
   map.addSource("src_" + key, { type: "vector", url: "pmtiles://" + key + ".pmtiles" });
   map.addLayer({ id: "grid_hi", type: "fill", source: "src_" + key, "source-layer": "grid",
     minzoom: 7, maxzoom: 22, paint: paint });
-  updateExplain(); updateLegend(); applyYear();
+  updateExplain(); updateLegend(); applyRange();
 }
 function restyle() {
   const p = paintFor(varMeta());
@@ -227,15 +241,25 @@ function restyle() {
   updateLegend();
 }
 
-// ---- year ----
-const yrSlider = document.getElementById("yrSlider");
-const yrOut = document.getElementById("yrOut");
-function applyYear() {
-  curYear = +yrSlider.value;
-  if (mode !== "fmean") yrOut.textContent = curYear;
+// ---- year range ----
+const yrFromEl = document.getElementById("yrFrom");
+const yrToEl = document.getElementById("yrTo");
+const yrFromOut = document.getElementById("yrFromOut");
+const yrToOut = document.getElementById("yrToOut");
+function rangeLabel() {
+  return yrFrom === yrTo ? "" + yrFrom : yrFrom + "–" + yrTo;
+}
+function applyRange() {
+  yrFrom = Math.min(+yrFromEl.value, +yrToEl.value);
+  yrTo = Math.max(+yrFromEl.value, +yrToEl.value);
+  yrFromEl.value = yrFrom; yrToEl.value = yrTo;
+  yrFromOut.textContent = yrFrom;
+  yrToOut.textContent = yrTo;
+  updatePlayState();
   restyle();
 }
-yrSlider.oninput = () => { stopPlay(); applyYear(); };
+yrFromEl.oninput = () => { stopPlay(); applyRange(); };
+yrToEl.oninput = () => { stopPlay(); applyRange(); };
 
 // ---- play ----
 let playTimer = null;
@@ -243,14 +267,21 @@ const playBtn = document.getElementById("playBtn");
 function stopPlay() {
   if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.innerHTML = "&#9654;"; }
 }
+function updatePlayState() {
+  const single = (yrFrom === yrTo) && mode !== "fmean";
+  if (!single) stopPlay();
+  playBtn.disabled = !single;
+  playBtn.style.opacity = single ? 1 : 0.4;
+}
 playBtn.onclick = () => {
   if (playTimer) { stopPlay(); return; }
-  yrSlider.value = 1950; applyYear();
+  const y0 = yrFrom;
+  yrFromEl.value = y0; yrToEl.value = y0; applyRange();
   playBtn.innerHTML = "&#10074;&#10074;";
   playTimer = setInterval(() => {
-    let y = +yrSlider.value + 1;
-    if (y > 2025) { stopPlay(); return; }
-    yrSlider.value = y; applyYear();
+    let y = yrTo + 1;
+    if (y > 2025) { stopPlay(); applyRange(); return; }
+    yrToEl.value = y; applyRange();
   }, 200);
 };
 
@@ -263,13 +294,10 @@ function setMode(m) {
   modeVal.classList.toggle("active", m === "value");
   modeAnom.classList.toggle("active", m === "anomaly");
   modeFmean.classList.toggle("active", m === "fmean");
-  const isFmean = (m === "fmean");
-  if (isFmean) stopPlay();
-  playBtn.disabled = isFmean;
-  yrSlider.disabled = isFmean;
-  playBtn.style.opacity = isFmean ? 0.4 : 1;
-  yrOut.textContent = isFmean ? "1950–2025" : curYear;
-  restyle();
+  if (m === "fmean") {
+    yrFromEl.value = 1950; yrToEl.value = 2025;
+  }
+  applyRange();
 }
 modeVal.onclick = () => setMode("value");
 modeAnom.onclick = () => setMode("anomaly");
@@ -279,12 +307,18 @@ modeFmean.onclick = () => setMode("fmean");
 function showPopup(e) {
   const p = e.features[0].properties;
   const v = varMeta();
-  const val = p[yprop()];
-  const anom = val - p.clim;
+  // compute range mean client-side from properties
+  let sum = 0, n = 0;
+  for (let y = yrFrom; y <= yrTo; y++) {
+    const val = p["y" + y];
+    if (val != null) { sum += val; n++; }
+  }
+  const val = n ? sum / n : null;
+  const anom = val != null ? val - p.clim : null;
   const s = anom > 0 ? "+" : "";
   new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
-    "<b>" + v.key + " " + curYear + "</b><br>" +
-    "Value: " + fmt(val) + " " + v.unit + "<br>" +
+    "<b>" + v.key + " " + rangeLabel() + "</b><br>" +
+    "Mean: " + fmt(val) + " " + v.unit + "<br>" +
     "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
     "Anomaly: " + s + fmt(anom) + " " + v.unit
   ).addTo(map);
