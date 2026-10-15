@@ -203,23 +203,27 @@ function fmt(x) {
 }
 
 // ---- map layers ----
-let currentSrc = null;
+let currentVar = null;
 function loadVariable() {
   const key = varSel.value;
-  if (currentSrc) {
-    if (map.getLayer("grid")) map.removeLayer("grid");
-    map.removeSource(currentSrc);
+  if (currentVar) {
+    for (const lid of ["grid_lo", "grid_hi"]) if (map.getLayer(lid)) map.removeLayer(lid);
+    for (const sid of ["src_" + currentVar + "_lo", "src_" + currentVar]) if (map.getSource(sid)) map.removeSource(sid);
   }
-  currentSrc = "src_" + key;
-  map.addSource(currentSrc, { type: "vector", url: "pmtiles://" + key + ".pmtiles" });
-  map.addLayer({
-    id: "grid", type: "fill", source: currentSrc, "source-layer": "grid",
-    paint: { "fill-color": paintFor(varMeta()), "fill-opacity": 0.8, "fill-outline-color": "rgba(0,0,0,0)" }
-  });
+  currentVar = key;
+  const paint = { "fill-color": paintFor(varMeta()), "fill-opacity": 0.8, "fill-outline-color": "rgba(0,0,0,0)" };
+  map.addSource("src_" + key + "_lo", { type: "vector", url: "pmtiles://" + key + "_low.pmtiles" });
+  map.addLayer({ id: "grid_lo", type: "fill", source: "src_" + key + "_lo", "source-layer": "grid",
+    minzoom: 0, maxzoom: 7, paint: paint });
+  map.addSource("src_" + key, { type: "vector", url: "pmtiles://" + key + ".pmtiles" });
+  map.addLayer({ id: "grid_hi", type: "fill", source: "src_" + key, "source-layer": "grid",
+    minzoom: 7, maxzoom: 22, paint: paint });
   updateExplain(); updateLegend(); applyYear();
 }
 function restyle() {
-  if (map.getLayer("grid")) map.setPaintProperty("grid", "fill-color", paintFor(varMeta()));
+  const p = paintFor(varMeta());
+  if (map.getLayer("grid_lo")) map.setPaintProperty("grid_lo", "fill-color", p);
+  if (map.getLayer("grid_hi")) map.setPaintProperty("grid_hi", "fill-color", p);
   updateLegend();
 }
 
@@ -266,7 +270,7 @@ modeAnom.onclick = () => setMode("anomaly");
 modeFmean.onclick = () => setMode("fmean");
 
 // ---- popup ----
-map.on("click", "grid", (e) => {
+function showPopup(e) {
   const p = e.features[0].properties;
   const v = varMeta();
   const val = p[yprop()];
@@ -278,7 +282,9 @@ map.on("click", "grid", (e) => {
     "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
     "Anomaly: " + s + fmt(anom) + " " + v.unit
   ).addTo(map);
-});
+}
+map.on("click", "grid_lo", showPopup);
+map.on("click", "grid_hi", showPopup);
 map.on("mouseenter", "grid", () => map.getCanvas().style.cursor = "pointer");
 map.on("mouseleave", "grid", () => map.getCanvas().style.cursor = "");
 
