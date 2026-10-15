@@ -157,14 +157,16 @@ function updateExplain() {
 const SEQ = ["#ffffcc","#fed976","#fd8d3c","#e31a1c","#800026"];
 const DIV = ["#2166ac","#92c5de","#f7f7f7","#f4a582","#b2182b"];
 let mode = "value";
+let curYear = 2025;
+function yprop() { return "y" + curYear; }
 function paintFor(v) {
   if (mode === "anomaly") {
     const a = v.amax || 1;
-    return ["interpolate", ["linear"], ["-", ["get","val"], ["get","clim"]],
+    return ["interpolate", ["linear"], ["-", ["get", yprop()], ["get","clim"]],
       -a, DIV[0], -a/2, DIV[1], 0, DIV[2], a/2, DIV[3], a, DIV[4]];
   }
   const lo = v.vmin, hi = v.vmax;
-  return ["interpolate", ["linear"], ["get","val"],
+  return ["interpolate", ["linear"], ["get", yprop()],
     lo, SEQ[0], lo+(hi-lo)*0.25, SEQ[1], lo+(hi-lo)*0.5, SEQ[2],
     lo+(hi-lo)*0.75, SEQ[3], hi, SEQ[4]];
 }
@@ -217,9 +219,9 @@ function restyle() {
 const yrSlider = document.getElementById("yrSlider");
 const yrOut = document.getElementById("yrOut");
 function applyYear() {
-  const y = +yrSlider.value;
-  yrOut.textContent = y;
-  if (map.getLayer("grid")) map.setFilter("grid", ["==", ["get","yr"], y]);
+  curYear = +yrSlider.value;
+  yrOut.textContent = curYear;
+  restyle();
 }
 yrSlider.oninput = () => { stopPlay(); applyYear(); };
 
@@ -250,11 +252,12 @@ modeAnom.onclick = () => { mode = "anomaly"; modeAnom.classList.add("active"); m
 map.on("click", "grid", (e) => {
   const p = e.features[0].properties;
   const v = varMeta();
-  const anom = p.val - p.clim;
+  const val = p[yprop()];
+  const anom = val - p.clim;
   const s = anom > 0 ? "+" : "";
   new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
-    "<b>" + v.key + " " + p.yr + "</b><br>" +
-    "Value: " + fmt(p.val) + " " + v.unit + "<br>" +
+    "<b>" + v.key + " " + curYear + "</b><br>" +
+    "Value: " + fmt(val) + " " + v.unit + "<br>" +
     "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
     "Anomaly: " + s + fmt(anom) + " " + v.unit
   ).addTo(map);
