@@ -80,11 +80,16 @@
   </div>
   <div class="row" style="display:flex; gap:10px; align-items:center;">
     <button id="playBtn" title="Play timeline 2000-2026" style="cursor:pointer;font-size:14px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;">&#9654;</button>
-    <label style="margin:0;"><input type="checkbox" id="heatToggle" style="width:auto;"> heatmap view</label>
+    <label style="margin:0;"><input type="checkbox" id="heatToggle" style="width:auto;"> frequency grid</label>
   </div>
   <canvas id="yrChart"></canvas>
   <div id="legend">
     <div style="font-size:11px;">Flood events (blue) &mdash; overlapping areas darken where floods cluster.</div>
+    <div id="hexLegend" style="display:none; margin-top:6px;">
+      <div style="font-size:11px; margin-bottom:2px;">Events per 0.25&deg; cell (log scale):</div>
+      <div style="height:10px; border-radius:3px; background:linear-gradient(to right, #fee5d9, #fcae91, #fb6a4a, #ef3b2c, #99000d);"></div>
+      <div style="display:flex; justify-content:space-between; font-size:11px;"><span>1</span><span>10</span><span>100</span><span>1000</span></div>
+    </div>
   </div>
   </div>
 </div>
@@ -109,7 +114,7 @@
     Dataset: <a href="https://doi.org/10.5281/zenodo.18647054">doi.org/10.5281/zenodo.18647054</a> (CC BY 4.0).<br>
     Catalog entry: <a href="https://gee-community-catalog.org/projects/groundsource/">gee-community-catalog.org/projects/groundsource</a></p>
     <h4>Map notes</h4>
-    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. The heatmap view aggregates event centroids weighted by flooded area. The play button animates the year filter from 2000 to 2026.</p>
+    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. The frequency-grid view counts events per 0.25&deg; cell on a log color scale &mdash; an absolute scale, so hotspots read the same at any zoom. The play button animates the year filter from 2000 to 2026.</p>
   </div>
 </div>
 
@@ -130,9 +135,9 @@ map.on("load", () => {
     type: "vector",
     url: "pmtiles://thailand_floods.pmtiles"
   });
-  map.addSource("heat", {
+  map.addSource("hex", {
     type: "vector",
-    url: "pmtiles://thailand_heat.pmtiles"
+    url: "pmtiles://thailand_hex.pmtiles"
   });
   map.addLayer({
     id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
@@ -145,25 +150,20 @@ map.on("load", () => {
     id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
     paint: { "line-color": "#0d3f8a", "line-width": 0.5, "line-opacity": 0.6 }
   });
+  // frequency grid: absolute counts per 0.25-degree cell, log color scale.
+  // fixed scale (not viewport-relative) so hotspots read the same at any zoom.
   map.addLayer({
-    id: "flood-heat", type: "heatmap", source: "heat", "source-layer": "pts",
+    id: "flood-hex", type: "fill", source: "hex", "source-layer": "hex",
     layout: { visibility: "none" },
     paint: {
-      // uniform weight: hotspot = where floods are reported, not how big
-      "heatmap-weight": 0.5,
-      // low intensity at country zoom: tames the 1000x Bangkok-vs-rural density ratio
-      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 3, 0.25, 8, 1.2],
-      // most color stops in the low-density range so secondary hotspots differentiate
-      "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"],
-        0, "rgba(0,0,0,0)",
-        0.03, "#fee5d9",
-        0.08, "#fcae91",
-        0.18, "#fb6a4a",
-        0.35, "#ef3b2c",
-        0.6, "#cb181d",
-        1, "#99000d"],
-      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 3, 20, 8, 35],
-      "heatmap-opacity": 0.9
+      "fill-color": ["interpolate", ["linear"], ["get", "logn"],
+        0, "#fee5d9",
+        1, "#fcae91",
+        2, "#fb6a4a",
+        2.7, "#ef3b2c",
+        3, "#99000d"],
+      "fill-opacity": 0.75,
+      "fill-outline-color": "rgba(0,0,0,0)"
     }
   });
   applyFilters();
@@ -188,20 +188,24 @@ function applyFilters() {
   const f = ["all",
     [">=", ["get", "yr"], y0], ["<=", ["get", "yr"], y1],
     [">=", ["get", "area"], a0]];
-  for (const lid of ["flood-fill", "flood-line", "flood-heat"]) {
+  for (const lid of ["flood-fill", "flood-line"]) {
     if (map.getLayer(lid)) map.setFilter(lid, f);
   }
+  // hex grid has no area property: year filter only
+  const hf = ["all", [">=", ["get", "yr"], y0], ["<=", ["get", "yr"], y1]];
+  if (map.getLayer("flood-hex")) map.setFilter("flood-hex", hf);
 }
 yrFrom.onchange = yrTo.onchange = areaMin.oninput = () => { stopPlay(); applyFilters(); };
 
-// ---- heatmap toggle ----
+// ---- frequency-grid toggle ----
 const heatToggle = document.getElementById("heatToggle");
 heatToggle.onchange = () => {
   const v = heatToggle.checked ? "visible" : "none";
-  map.setLayoutProperty("flood-heat", "visibility", v);
+  map.setLayoutProperty("flood-hex", "visibility", v);
   const pv = heatToggle.checked ? "none" : "visible";
   map.setLayoutProperty("flood-fill", "visibility", pv);
   map.setLayoutProperty("flood-line", "visibility", pv);
+  document.getElementById("hexLegend").style.display = heatToggle.checked ? "block" : "none";
 };
 
 // ---- time play ----
@@ -236,6 +240,18 @@ map.on("click", "flood-fill", (e) => {
 });
 map.on("mouseenter", "flood-fill", () => map.getCanvas().style.cursor = "pointer");
 map.on("mouseleave", "flood-fill", () => map.getCanvas().style.cursor = "");
+
+// ---- hex cell popup ----
+map.on("click", "flood-hex", (e) => {
+  const p = e.features[0].properties;
+  new maplibregl.Popup()
+    .setLngLat(e.lngLat)
+    .setHTML("<b>" + p.n + " flood events</b><br>" +
+      "in " + p.yr + ", per 0.25&deg; cell")
+    .addTo(map);
+});
+map.on("mouseenter", "flood-hex", () => map.getCanvas().style.cursor = "pointer");
+map.on("mouseleave", "flood-hex", () => map.getCanvas().style.cursor = "");
 
 // ---- year chart ----
 fetch("stats.json").then(r => r.json()).then(stats => {
