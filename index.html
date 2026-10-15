@@ -2,128 +2,124 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thailand Flood Events — Groundsource</title>
-<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Thailand Climate Extremes (ERA5-EX)</title>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
 <style>
-  html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
-  #map { position: absolute; inset: 0; }
-  #panel {
-    position: absolute; top: 12px; left: 12px; z-index: 10;
-    background: rgba(255,255,255,0.95); border-radius: 10px;
-    padding: 10px 14px; font-size: 13px; line-height: 1.5;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15); max-width: 340px;
-  }
-  #panel b { font-size: 14px; }
-  #panel .sub { color: #555; font-size: 12px; }
-  #panel .row { margin: 8px 0 2px; }
-  #panel label { font-size: 12px; color: #333; display: block; margin-bottom: 2px; }
-  #panel select, #panel input[type=range] { width: 100%; font-size: 13px; }
-  #panel output { font-size: 12px; color: #555; }
-  #yrChart { width: 100%; height: 90px; margin-top: 6px; }
-  #legend { margin-top: 8px; font-size: 11px; color: #555; }
-  #legend .bar { height: 10px; border-radius: 3px; margin: 2px 0;
-    background: linear-gradient(to right, #2166ac, #67a9cf, #fddbc7, #ef8a62, #b2182b); }
-  #legend .ends { display: flex; justify-content: space-between; }
-  #infoBtn {
-    float: right; cursor: pointer; font-size: 16px; line-height: 1;
-    width: 22px; height: 22px; text-align: center; border-radius: 50%;
-    background: #eee; color: #333; border: 1px solid #ccc; padding: 0;
-  }
-  #infoBtn:hover { background: #ddd; }
-  #infoModal {
-    display: none; position: fixed; z-index: 100; left: 0; top: 0;
-    width: 100%; height: 100%; background: rgba(0,0,0,0.4);
-  }
-  #infoContent {
-    background: #fff; margin: 6% auto; padding: 20px 24px; border-radius: 10px;
-    max-width: 560px; max-height: 80%; overflow-y: auto;
-    font-size: 13px; line-height: 1.6; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  }
-  #infoContent h3 { margin: 0 0 8px; font-size: 15px; }
-  #infoContent h4 { margin: 14px 0 4px; font-size: 13px; }
-  #infoContent p, #infoContent li { margin: 4px 0; }
-  #infoContent ul { padding-left: 18px; }
-  #infoContent code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
-  #infoClose { float: right; cursor: pointer; font-size: 18px; color: #888; }
-  #infoClose:hover { color: #333; }
-  #attrib {
-    position: absolute; bottom: 0; right: 0; z-index: 10;
-    background: rgba(255,255,255,0.85); font-size: 10px; color: #555;
-    padding: 2px 6px; border-radius: 4px 0 0 0;
-  }
-  #attrib a { color: #555; }
-  .maplibregl-popup-content { font-size: 13px; line-height: 1.5; }
-  .maplibregl-popup-content b { font-size: 13px; }
+  html, body { margin:0; height:100%; font-family: system-ui, -apple-system, sans-serif; }
+  #map { position:absolute; inset:0; }
+  #panel { position:absolute; top:10px; left:10px; z-index:10; background:rgba(255,255,255,.94);
+    border-radius:10px; padding:10px 12px; max-width:300px; box-shadow:0 2px 8px rgba(0,0,0,.2); font-size:13px; }
+  #panel .sub { color:#555; font-size:11px; }
+  #panel select { width:100%; margin:6px 0 2px; font-size:13px; }
+  #explain { font-size:12px; color:#333; background:#f4f6f8; border-radius:6px; padding:6px 8px; margin:6px 0; }
+  #explain .unit { color:#777; }
+  .row { margin:8px 0; }
+  .row label { font-size:12px; }
+  .row output { font-weight:600; }
+  input[type=range] { width:100%; }
+  #legend { margin-top:8px; }
+  #legend .bar { height:10px; border-radius:3px; }
+  #legend .ends { display:flex; justify-content:space-between; font-size:11px; color:#444; }
+  #legend .mid { text-align:center; font-size:11px; color:#444; }
+  .btnrow { display:flex; gap:8px; align-items:center; margin:6px 0; }
+  .btnrow button { cursor:pointer; font-size:13px; padding:4px 10px; border-radius:6px; border:1px solid #ccc; background:#f5f5f5; }
+  .btnrow button.active { background:#1d6fd1; color:#fff; border-color:#1d6fd1; }
+  #infoBtn, #minBtn { float:right; cursor:pointer; width:22px; height:22px; border-radius:50%;
+    background:#eee; color:#333; border:1px solid #ccc; font-size:13px; line-height:1; padding:0; margin-left:6px; }
+  #attrib { position:absolute; bottom:2px; right:6px; z-index:10; font-size:10px; color:#666;
+    background:rgba(255,255,255,.7); padding:1px 5px; border-radius:4px; }
+  #infoModal { display:none; position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.45); }
+  #infoModal .box { background:#fff; margin:5% auto; max-width:640px; max-height:85%; overflow:auto;
+    border-radius:12px; padding:18px 22px; font-size:13px; line-height:1.5; }
+  #infoModal h2 { margin-top:0; } #infoModal h3 { margin-bottom:4px; }
+  #infoModal dl { margin:4px 0 12px; } #infoModal dt { margin-top:6px; }
+  #infoModal dd { margin:2px 0 0 12px; color:#444; }
+  #infoModal .unit { color:#888; font-weight:normal; }
+  #infoClose { float:right; cursor:pointer; border:1px solid #ccc; background:#eee; border-radius:6px; padding:2px 10px; }
+  #closePanel { display:none; }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="panel">
   <button id="infoBtn" title="About this data">&#9432;</button>
-  <button id="minBtn" title="Minimize panel" style="float:right;cursor:pointer;font-size:14px;line-height:1;width:22px;height:22px;text-align:center;border-radius:50%;background:#eee;color:#333;border:1px solid #ccc;padding:0;margin-left:8px;">&ndash;</button>
-  <b>Thailand Flood Events</b><br>
+  <button id="minBtn" title="Minimize panel">&ndash;</button>
+  <b>Thailand Climate Extremes</b><br>
+  <span class="sub">ERA5-EX &mdash; 34 indices, 1950&ndash;2025<br>0.1&deg; grid, derived from ERA5-Land</span>
   <div id="panelBody">
-  <span class="sub">Groundsource &mdash; 99,197 events, 2000&ndash;2026<br>LLM-extracted from news reports</span>
+  <select id="varSel"></select>
+  <div id="explain"></div>
   <div class="row">
-    <label>Year range: <output id="yrOut">2000 &ndash; 2026</output></label>
-    <div style="display:flex; gap:8px;">
-      <select id="yrFrom" style="flex:1"></select>
-      <select id="yrTo" style="flex:1"></select>
-    </div>
+    <label>Year: <output id="yrOut">2025</output></label>
+    <input type="range" id="yrSlider" min="1950" max="2025" step="1" value="2025">
   </div>
-  <div class="row">
-    <label>Minimum event area: <output id="areaOut">&ge; 0 km&sup2;</output></label>
-    <input type="range" id="areaMin" min="0" max="500" step="10" value="0">
+  <div class="btnrow">
+    <button id="playBtn" title="Play 1950-2025">&#9654;</button>
+    <button id="modeVal" class="active">Value</button>
+    <button id="modeAnom" title="Difference from 1991-2020 mean">Anomaly</button>
   </div>
-  <div class="row" style="display:flex; gap:10px; align-items:center;">
-    <button id="playBtn" title="Play month-by-month (Nov 2000 - Jan 2026)" style="cursor:pointer;font-size:14px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;">&#9654;</button>
-    <label style="margin:0;"><input type="checkbox" id="heatToggle" style="width:auto;"> frequency grid</label>
-  </div>
-  <canvas id="yrChart"></canvas>
   <div id="legend">
-    <div style="font-size:11px; margin-bottom:2px;">Event duration (flash-flood signal):</div>
-    <div style="display:flex; gap:10px; font-size:11px;">
-      <span><span style="display:inline-block;width:10px;height:10px;background:#e6550d;border-radius:2px;"></span> 1 day &mdash; flash</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:#3182bd;border-radius:2px;"></span> 2&ndash;3 days</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:#6a51a3;border-radius:2px;"></span> 4+ days &mdash; lingering</span>
-    </div>
-    <div id="hexLegend" style="display:none; margin-top:6px;">
-      <div style="font-size:11px; margin-bottom:2px;">Events per 0.25&deg; cell (log scale):</div>
-      <div style="height:10px; border-radius:3px; background:linear-gradient(to right, #fee5d9, #fcae91, #fb6a4a, #ef3b2c, #99000d);"></div>
-      <div style="display:flex; justify-content:space-between; font-size:11px;"><span>1</span><span>10</span><span>100</span><span>1000</span></div>
-    </div>
+    <div class="bar" id="legBar"></div>
+    <div class="ends"><span id="legMin"></span><span id="legMax"></span></div>
+    <div class="mid" id="legUnit"></div>
   </div>
   </div>
 </div>
-<div id="attrib">Flood events: <a href="https://doi.org/10.5281/zenodo.18647054">Groundsource</a> (CC BY 4.0) &middot; Basemap: <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></div>
-
-<div id="infoModal">
-  <div id="infoContent">
-    <span id="infoClose">&times;</span>
-    <h3>About this data</h3>
-    <p><b>Groundsource: A Global Dataset of Flood Events from News.</b> 2,646,302 flood events worldwide extracted from 5M+ news articles (80 languages) using Gemini LLMs, geocoded via Google Maps. This site shows the 70,795 events in Thailand (2000-11-20 to 2026-01-26). The source extract used a rectangular bounding box, so 28,402 events falling entirely outside Thailand's borders (neighboring countries and sea) were removed; border-crossing events are kept whole.</p>
-    <h4>What each event is</h4>
-    <p>One row = one spatiotemporal flood observation: a polygon (administrative area or buffered point) with start/end dates and area in km&sup2;. The dataset is <b>entity-based, not meteorology-based</b> &mdash; one large flood can appear as many entries for different reported places.</p>
-    <h4>Known biases</h4>
-    <ul>
-      <li><b>Recency bias:</b> ~64% of events are 2020&ndash;2025 (more digitized news, not more floods).</li>
-      <li><b>Media bias:</b> coverage follows digital news infrastructure; recall is lower where local news is sparse.</li>
-      <li><b>Severity bias:</b> high-impact events are over-represented vs. minor ones.</li>
-      <li>Geocoding errors may cluster by region/language.</li>
-    </ul>
-    <h4>Citation</h4>
-    <p>Mayo, R. et al. (2026). <i>Groundsource: A Dataset of Flood Events from News.</i> EarthArXiv. Unreviewed preprint.<br>
-    Dataset: <a href="https://doi.org/10.5281/zenodo.18647054">doi.org/10.5281/zenodo.18647054</a> (CC BY 4.0).<br>
-    Catalog entry: <a href="https://gee-community-catalog.org/projects/groundsource/">gee-community-catalog.org/projects/groundsource</a></p>
-    <h4>Map notes</h4>
-    <p>Tiles load dynamically per viewport/zoom (PMTiles). Low zooms show a thinned sample; zoom in for full detail. Polygons are colored by event duration: 1-day (flash-like, the closest proxy to flash-flood labels), 2&ndash;3 days, and 4+ days (lingering riverine). The frequency-grid view counts events per 0.25&deg; cell on a log color scale &mdash; an absolute scale, so hotspots read the same at any zoom. The play button steps month by month from Nov 2000 to Jan 2026, showing only events active during each month (events appear when they start and disappear when they end).</p>
-  </div>
-</div>
-
+<div id="attrib">Extremes: <a href="https://doi.org/10.1038/s41597-026-08312-x">ERA5-EX</a> (CC BY 4.0) &middot; Basemap: <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a></div>
+<div id="infoModal"><div class="box">
+  <button id="infoClose">Close</button>
+  <h2>Thailand Climate Extremes (ERA5-EX)</h2>
+  <p>Annual climate-extreme indices on a 0.1&deg; grid over Thailand, 1950&ndash;2025, computed from ERA5-Land daily temperature and precipitation. Each cell shows one year; scrub the year slider or press play to animate. <b>Anomaly</b> mode shows the difference from the 1991&ndash;2020 mean.</p>
+  <p>Percentile thresholds use the 1961&ndash;1990 baseline. Ocean and no-data cells are blank.</p>
+  <h3>Temperature extremes</h3><dl>
+<dt><b>CSDI</b> — Coldwave days <span class="unit">(days)</span></dt><dd>Days in cold snaps — 6+ consecutive days of unusual cold.</dd>
+<dt><b>DTR</b> — Day-night swing <span class="unit">(°C)</span></dt><dd>Average difference between afternoon high and night low. Shrinks when nights warm faster than days.</dd>
+<dt><b>FD</b> — Frost nights <span class="unit">(days)</span></dt><dd>Nights below 0°C. Rare in Thailand outside high mountains.</dd>
+<dt><b>ID</b> — Ice days <span class="unit">(days)</span></dt><dd>Days that never get above 0°C. Virtually absent in Thailand.</dd>
+<dt><b>SU</b> — Summer days <span class="unit">(days)</span></dt><dd>Days hotter than 25°C. Counts how long summer-like heat lasts each year.</dd>
+<dt><b>TN10p</b> — Cold nights <span class="unit">(%)</span></dt><dd>Share of nights colder than 90% of nights in 1961–1990.</dd>
+<dt><b>TN90p</b> — Warm nights <span class="unit">(%)</span></dt><dd>Share of nights warmer than 90% of nights in 1961–1990.</dd>
+<dt><b>TNn</b> — Coldest night <span class="unit">(°C)</span></dt><dd>The coldest nighttime low of the year.</dd>
+<dt><b>TNx</b> — Warmest night <span class="unit">(°C)</span></dt><dd>The warmest nighttime low of the year. High TNx means nights don't cool down — the dangerous part of heatwaves.</dd>
+<dt><b>TR</b> — Tropical nights <span class="unit">(days)</span></dt><dd>Nights warmer than 20°C — nights with no relief from heat.</dd>
+<dt><b>TX10p</b> — Cool days <span class="unit">(%)</span></dt><dd>Share of days with unusually cool afternoons (cooler than 90% of days in 1961–1990). Shrinking as the climate warms.</dd>
+<dt><b>TX90p</b> — Hot days <span class="unit">(%)</span></dt><dd>Share of days with unusually hot afternoons (hotter than 90% of days in 1961–1990).</dd>
+<dt><b>TXn</b> — Coldest day <span class="unit">(°C)</span></dt><dd>The coldest afternoon temperature of the year. Rising TXn means winters are losing their coldest days.</dd>
+<dt><b>TXx</b> — Hottest day <span class="unit">(°C)</span></dt><dd>The hottest afternoon temperature of the year. Rising TXx means more intense heat peaks.</dd>
+<dt><b>WSDI</b> — Heatwave days <span class="unit">(days)</span></dt><dd>Days in heatwaves — 6+ consecutive days of unusual heat.</dd>
+</dl>
+<h3>Rainfall extremes</h3><dl>
+<dt><b>CDD</b> — Longest dry spell <span class="unit">(days)</span></dt><dd>Most consecutive days with under 1mm rain — the drought number.</dd>
+<dt><b>CWD</b> — Longest wet spell <span class="unit">(days)</span></dt><dd>Most consecutive days with 1mm+ rain.</dd>
+<dt><b>PRCPTOT</b> — Yearly rainfall <span class="unit">(mm)</span></dt><dd>Total rain for the whole year.</dd>
+<dt><b>R10mm</b> — Heavy rain days <span class="unit">(days)</span></dt><dd>Days with 10mm or more — solid downpours.</dd>
+<dt><b>R1mm</b> — Rainy days <span class="unit">(days)</span></dt><dd>Days with at least 1mm of rain.</dd>
+<dt><b>R20mm</b> — Very heavy rain days <span class="unit">(days)</span></dt><dd>Days with 20mm or more — the kind that floods streets.</dd>
+<dt><b>R95p</b> — Very wet days total <span class="unit">(mm)</span></dt><dd>Total rain falling on the wettest 5% of days. Grows when extremes intensify.</dd>
+<dt><b>R99p</b> — Extremely wet days total <span class="unit">(mm)</span></dt><dd>Total rain on the wettest 1% of days — the rarest deluges.</dd>
+<dt><b>RX1day</b> — Heaviest downpour <span class="unit">(mm)</span></dt><dd>The most rain falling in a single day each year — the flash-flood number.</dd>
+<dt><b>RX5day</b> — Heaviest 5-day rain <span class="unit">(mm)</span></dt><dd>The most rain in any 5 consecutive days — the river-flood number.</dd>
+<dt><b>SDII</b> — Rain intensity <span class="unit">(mm/day)</span></dt><dd>Average rain per rainy day. Rises when rain comes in harder bursts.</dd>
+</dl>
+<h3>Compound events</h3><dl>
+<dt><b>cold_day_night</b> — Cold days + cold nights <span class="unit">(days)</span></dt><dd>Days where both afternoon and night were unusually cold.</dd>
+<dt><b>cold_heavy_rain</b> — Cold + extreme rain <span class="unit">(days)</span></dt><dd>Unusually cold days with extreme rainfall.</dd>
+<dt><b>dry_cold</b> — Cold + dry days <span class="unit">(days)</span></dt><dd>Days both unusually cold and dry.</dd>
+<dt><b>dry_hot</b> — Hot + dry days <span class="unit">(days)</span></dt><dd>Days both extremely hot and dry — drought-heat combos that stress crops and power grids.</dd>
+<dt><b>warm_day_night</b> — Hot days + warm nights <span class="unit">(days)</span></dt><dd>Days where both afternoon and night were unusually hot — no overnight relief.</dd>
+<dt><b>warm_heavy_rain</b> — Hot + extreme rain <span class="unit">(days)</span></dt><dd>Extremely hot days with extreme rainfall — the worst flash-flood setup.</dd>
+<dt><b>wet_cold</b> — Cold + rainy days <span class="unit">(days)</span></dt><dd>Days both unusually cold and rainy.</dd>
+<dt><b>wet_hot</b> — Hot + rainy days <span class="unit">(days)</span></dt><dd>Days both extremely hot and rainy — tropical downpours in heat.</dd>
+</dl>
+  <h3>Citation</h3>
+  <p>Peng, S. et al. (2026). A global 0.1-degree gridded dataset of single and compound temperature and precipitation extremes from 1950 to 2025. <i>Scientific Data</i>. <a href="https://doi.org/10.1038/s41597-026-08312-x">doi:10.1038/s41597-026-08312-x</a> — dataset CC BY 4.0 via Figshare <a href="https://doi.org/10.6084/m9.figshare.31812172">10.6084/m9.figshare.31812172</a>.</p>
+</div></div>
 <script>
+const VARS = [{"key":"temperature","label":"Temperature extremes","vars":[{"key":"CSDI","explain":"Days in cold snaps \u2014 6+ consecutive days of unusual cold.","name":"Coldwave days","unit":"days","vmin":0.0,"vmax":30.0,"amax":18.1,"mean":6.79},{"key":"DTR","explain":"Average difference between afternoon high and night low. Shrinks when nights warm faster than days.","name":"Day-night swing","unit":"\u00b0C","vmin":5.01,"vmax":10.14,"amax":0.8,"mean":8.12},{"key":"FD","explain":"Nights below 0\u00b0C. Rare in Thailand outside high mountains.","name":"Frost nights","unit":"days","vmin":0.0,"vmax":0.0,"amax":0.0,"mean":0.0},{"key":"ID","explain":"Days that never get above 0\u00b0C. Virtually absent in Thailand.","name":"Ice days","unit":"days","vmin":0.0,"vmax":0.0,"amax":0.0,"mean":0.0},{"key":"SU","explain":"Days hotter than 25\u00b0C. Counts how long summer-like heat lasts each year.","name":"Summer days","unit":"days","vmin":158.0,"vmax":366.0,"amax":30.5,"mean":325.3},{"key":"TN10p","explain":"Share of nights colder than 90% of nights in 1961\u20131990.","name":"Cold nights","unit":"%","vmin":0.55,"vmax":22.47,"amax":13.11,"mean":8.46},{"key":"TN90p","explain":"Share of nights warmer than 90% of nights in 1961\u20131990.","name":"Warm nights","unit":"%","vmin":1.64,"vmax":50.41,"amax":24.49,"mean":16.06},{"key":"TNn","explain":"The coldest nighttime low of the year.","name":"Coldest night","unit":"\u00b0C","vmin":3.23,"vmax":20.93,"amax":3.19,"mean":12.67},{"key":"TNx","explain":"The warmest nighttime low of the year. High TNx means nights don't cool down \u2014 the dangerous part of heatwaves.","name":"Warmest night","unit":"\u00b0C","vmin":20.5,"vmax":29.46,"amax":1.63,"mean":25.59},{"key":"TR","explain":"Nights warmer than 20\u00b0C \u2014 nights with no relief from heat.","name":"Tropical nights","unit":"days","vmin":6.0,"vmax":365.0,"amax":37.97,"mean":256.66},{"key":"TX10p","explain":"Share of days with unusually cool afternoons (cooler than 90% of days in 1961\u20131990). Shrinking as the climate warms.","name":"Cool days","unit":"%","vmin":3.29,"vmax":20.55,"amax":8.53,"mean":9.8},{"key":"TX90p","explain":"Share of days with unusually hot afternoons (hotter than 90% of days in 1961\u20131990).","name":"Hot days","unit":"%","vmin":1.92,"vmax":38.36,"amax":18.74,"mean":14.12},{"key":"TXn","explain":"The coldest afternoon temperature of the year. Rising TXn means winters are losing their coldest days.","name":"Coldest day","unit":"\u00b0C","vmin":8.29,"vmax":26.16,"amax":3.87,"mean":20.6},{"key":"TXx","explain":"The hottest afternoon temperature of the year. Rising TXx means more intense heat peaks.","name":"Hottest day","unit":"\u00b0C","vmin":30.86,"vmax":40.45,"amax":2.34,"mean":36.28},{"key":"WSDI","explain":"Days in heatwaves \u2014 6+ consecutive days of unusual heat.","name":"Heatwave days","unit":"days","vmin":0.0,"vmax":80.0,"amax":41.9,"mean":17.17}]},{"key":"precipitation","label":"Rainfall extremes","vars":[{"key":"CDD","explain":"Most consecutive days with under 1mm rain \u2014 the drought number.","name":"Longest dry spell","unit":"days","vmin":9.0,"vmax":85.0,"amax":28.93,"mean":40.25},{"key":"CWD","explain":"Most consecutive days with 1mm+ rain.","name":"Longest wet spell","unit":"days","vmin":15.0,"vmax":163.0,"amax":48.47,"mean":55.45},{"key":"PRCPTOT","explain":"Total rain for the whole year.","name":"Yearly rainfall","unit":"mm","vmin":956.5,"vmax":3574.96,"amax":578.54,"mean":1823.9},{"key":"R10mm","explain":"Days with 10mm or more \u2014 solid downpours.","name":"Heavy rain days","unit":"days","vmin":26.0,"vmax":126.0,"amax":23.53,"mean":63.26},{"key":"R1mm","explain":"Days with at least 1mm of rain.","name":"Rainy days","unit":"days","vmin":142.0,"vmax":285.0,"amax":33.53,"mean":199.35},{"key":"R20mm","explain":"Days with 20mm or more \u2014 the kind that floods streets.","name":"Very heavy rain days","unit":"days","vmin":4.0,"vmax":62.0,"amax":12.63,"mean":18.94},{"key":"R95p","explain":"Total rain falling on the wettest 5% of days. Grows when extremes intensify.","name":"Very wet days total","unit":"mm","vmin":88.4,"vmax":1004.2,"amax":383.99,"mean":386.95},{"key":"R99p","explain":"Total rain on the wettest 1% of days \u2014 the rarest deluges.","name":"Extremely wet days total","unit":"mm","vmin":33.8,"vmax":526.2,"amax":41.78,"mean":159.78},{"key":"RX1day","explain":"The most rain falling in a single day each year \u2014 the flash-flood number.","name":"Heaviest downpour","unit":"mm","vmin":27.2,"vmax":176.1,"amax":63.67,"mean":67.73},{"key":"RX5day","explain":"The most rain in any 5 consecutive days \u2014 the river-flood number.","name":"Heaviest 5-day rain","unit":"mm","vmin":73.9,"vmax":360.8,"amax":105.03,"mean":155.4},{"key":"SDII","explain":"Average rain per rainy day. Rises when rain comes in harder bursts.","name":"Rain intensity","unit":"mm/day","vmin":5.82,"vmax":17.08,"amax":2.21,"mean":9.1}]},{"key":"compound","label":"Compound events","vars":[{"key":"cold_day_night","explain":"Days where both afternoon and night were unusually cold.","name":"Cold days + cold nights","unit":"days","vmin":0.0,"vmax":34.0,"amax":19.03,"mean":10.67},{"key":"cold_heavy_rain","explain":"Unusually cold days with extreme rainfall.","name":"Cold + extreme rain","unit":"days","vmin":0.0,"vmax":10.0,"amax":6.0,"mean":2.53},{"key":"dry_cold","explain":"Days both unusually cold and dry.","name":"Cold + dry days","unit":"days","vmin":1.0,"vmax":43.0,"amax":23.17,"mean":17.03},{"key":"dry_hot","explain":"Days both extremely hot and dry \u2014 drought-heat combos that stress crops and power grids.","name":"Hot + dry days","unit":"days","vmin":4.0,"vmax":99.0,"amax":48.2,"mean":35.04},{"key":"warm_day_night","explain":"Days where both afternoon and night were unusually hot \u2014 no overnight relief.","name":"Hot days + warm nights","unit":"days","vmin":0.0,"vmax":96.0,"amax":48.23,"mean":22.96},{"key":"warm_heavy_rain","explain":"Extremely hot days with extreme rainfall \u2014 the worst flash-flood setup.","name":"Hot + extreme rain","unit":"days","vmin":0.0,"vmax":3.0,"amax":1.77,"mean":0.58},{"key":"wet_cold","explain":"Days both unusually cold and rainy.","name":"Cold + rainy days","unit":"days","vmin":0.0,"vmax":48.0,"amax":29.2,"mean":13.86},{"key":"wet_hot","explain":"Days both extremely hot and rainy \u2014 tropical downpours in heat.","name":"Hot + rainy days","unit":"days","vmin":1.0,"vmax":52.0,"amax":24.7,"mean":16.48}]}];
+
 const protocol = new pmtiles.Protocol();
 maplibregl.addProtocol("pmtiles", protocol.tile);
 
@@ -135,184 +131,139 @@ const map = new maplibregl.Map({
 });
 map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-map.on("load", () => {
-  map.addSource("floods", {
-    type: "vector",
-    url: "pmtiles://thailand_floods.pmtiles"
+// ---- variable selector ----
+const varSel = document.getElementById("varSel");
+const explain = document.getElementById("explain");
+const VARIDX = {};
+VARS.forEach(g => {
+  const og = document.createElement("optgroup");
+  og.label = g.label;
+  g.vars.forEach(v => {
+    VARIDX[v.key] = v;
+    const o = document.createElement("option");
+    o.value = v.key; o.textContent = v.key + " — " + v.name;
+    og.appendChild(o);
   });
-  map.addSource("hex", {
-    type: "vector",
-    url: "pmtiles://thailand_hex.pmtiles"
-  });
-  map.addLayer({
-    id: "flood-fill", type: "fill", source: "floods", "source-layer": "floods",
-    paint: {
-      // duration classes: flash (1d) vs short (2-3d) vs lingering (4d+) --
-      // the flash-flood-relevant split for ML training labels
-      "fill-color": [
-        "case",
-        ["==", ["get", "dur"], 1], "#e6550d",
-        ["<=", ["get", "dur"], 3], "#3182bd",
-        "#6a51a3"
-      ],
-      "fill-opacity": 0.55
-    }
-  });
-  map.addLayer({
-    id: "flood-line", type: "line", source: "floods", "source-layer": "floods",
-    paint: { "line-color": "#333333", "line-width": 0.4, "line-opacity": 0.5 }
-  });
-  // frequency grid: absolute counts per 0.25-degree cell, log color scale.
-  // fixed scale (not viewport-relative) so hotspots read the same at any zoom.
-  map.addLayer({
-    id: "flood-hex", type: "fill", source: "hex", "source-layer": "hex",
-    layout: { visibility: "none" },
-    paint: {
-      "fill-color": ["interpolate", ["linear"], ["get", "logn"],
-        0, "#fee5d9",
-        1, "#fcae91",
-        2, "#fb6a4a",
-        2.7, "#ef3b2c",
-        3, "#99000d"],
-      "fill-opacity": 0.75,
-      "fill-outline-color": "rgba(0,0,0,0)"
-    }
-  });
-  applyFilters();
+  varSel.appendChild(og);
 });
+varSel.value = "RX1day"; // default: heaviest downpour
+function varMeta() { return VARIDX[varSel.value]; }
+function updateExplain() {
+  const v = varMeta();
+  explain.innerHTML = "<b>" + v.key + "</b> <span class='unit'>(" + v.unit + ")</span><br>" + v.explain;
+}
 
-// ---- filters ----
-const yrFrom = document.getElementById("yrFrom");
-const yrTo = document.getElementById("yrTo");
-const areaMin = document.getElementById("areaMin");
+// ---- color ----
+const SEQ = ["#ffffcc","#fed976","#fd8d3c","#e31a1c","#800026"];
+const DIV = ["#2166ac","#92c5de","#f7f7f7","#f4a582","#b2182b"];
+let mode = "value";
+function paintFor(v) {
+  if (mode === "anomaly") {
+    const a = v.amax || 1;
+    return ["interpolate", ["linear"], ["-", ["get","val"], ["get","clim"]],
+      -a, DIV[0], -a/2, DIV[1], 0, DIV[2], a/2, DIV[3], a, DIV[4]];
+  }
+  const lo = v.vmin, hi = v.vmax;
+  return ["interpolate", ["linear"], ["get","val"],
+    lo, SEQ[0], lo+(hi-lo)*0.25, SEQ[1], lo+(hi-lo)*0.5, SEQ[2],
+    lo+(hi-lo)*0.75, SEQ[3], hi, SEQ[4]];
+}
+function updateLegend() {
+  const v = varMeta();
+  const bar = document.getElementById("legBar");
+  if (mode === "anomaly") {
+    const a = v.amax || 1;
+    bar.style.background = "linear-gradient(to right, #2166ac, #92c5de, #f7f7f7, #f4a582, #b2182b)";
+    document.getElementById("legMin").textContent = "-" + fmt(a);
+    document.getElementById("legMax").textContent = "+" + fmt(a);
+  } else {
+    bar.style.background = "linear-gradient(to right, #ffffcc, #fed976, #fd8d3c, #e31a1c, #800026)";
+    document.getElementById("legMin").textContent = fmt(v.vmin);
+    document.getElementById("legMax").textContent = fmt(v.vmax);
+  }
+  document.getElementById("legUnit").textContent =
+    (mode === "anomaly" ? "anomaly vs 1991–2020 (" + v.unit + ")" : v.unit);
+}
+function fmt(x) {
+  if (x == null) return "?";
+  const a = Math.abs(x);
+  if (a >= 100) return Math.round(x).toString();
+  if (a >= 10) return x.toFixed(1);
+  return x.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+// ---- map layers ----
+let currentSrc = null;
+function loadVariable() {
+  const key = varSel.value;
+  if (currentSrc) {
+    if (map.getLayer("grid")) map.removeLayer("grid");
+    map.removeSource(currentSrc);
+  }
+  currentSrc = "src_" + key;
+  map.addSource(currentSrc, { type: "vector", url: "pmtiles://" + key + ".pmtiles" });
+  map.addLayer({
+    id: "grid", type: "fill", source: currentSrc, "source-layer": "grid",
+    paint: { "fill-color": paintFor(varMeta()), "fill-opacity": 0.8, "fill-outline-color": "rgba(0,0,0,0)" }
+  });
+  updateExplain(); updateLegend(); applyYear();
+}
+function restyle() {
+  if (map.getLayer("grid")) map.setPaintProperty("grid", "fill-color", paintFor(varMeta()));
+  updateLegend();
+}
+
+// ---- year ----
+const yrSlider = document.getElementById("yrSlider");
 const yrOut = document.getElementById("yrOut");
-const areaOut = document.getElementById("areaOut");
-for (let y = 2000; y <= 2026; y++) {
-  yrFrom.add(new Option(y, y));
-  yrTo.add(new Option(y, y));
+function applyYear() {
+  const y = +yrSlider.value;
+  yrOut.textContent = y;
+  if (map.getLayer("grid")) map.setFilter("grid", ["==", ["get","yr"], y]);
 }
-yrFrom.value = 2000; yrTo.value = 2026;
+yrSlider.oninput = () => { stopPlay(); applyYear(); };
 
-function applyFilters() {
-  const y0 = +yrFrom.value, y1 = +yrTo.value, a0 = +areaMin.value;
-  yrOut.textContent = y0 + " \u2013 " + y1;
-  areaOut.innerHTML = "\u2265 " + a0 + " km\u00b2";
-  const f = ["all",
-    [">=", ["get", "yr"], y0], ["<=", ["get", "yr"], y1],
-    [">=", ["get", "area"], a0]];
-  for (const lid of ["flood-fill", "flood-line"]) {
-    if (map.getLayer(lid)) map.setFilter(lid, f);
-  }
-  // hex grid has no area property: year filter only
-  const hf = ["all", [">=", ["get", "yr"], y0], ["<=", ["get", "yr"], y1]];
-  if (map.getLayer("flood-hex")) map.setFilter("flood-hex", hf);
-}
-yrFrom.onchange = yrTo.onchange = areaMin.oninput = () => { stopPlay(); applyFilters(); };
-
-// ---- frequency-grid toggle ----
-const heatToggle = document.getElementById("heatToggle");
-heatToggle.onchange = () => {
-  const v = heatToggle.checked ? "visible" : "none";
-  map.setLayoutProperty("flood-hex", "visibility", v);
-  const pv = heatToggle.checked ? "none" : "visible";
-  map.setLayoutProperty("flood-fill", "visibility", pv);
-  map.setLayoutProperty("flood-line", "visibility", pv);
-  document.getElementById("hexLegend").style.display = heatToggle.checked ? "block" : "none";
-};
-
-// ---- time play: steps month by month, showing only events active that month ----
+// ---- play ----
 let playTimer = null;
-let playYM = null; // [year, month] while playing, else null
 const playBtn = document.getElementById("playBtn");
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const PLAY_START = [2000, 11], PLAY_END = [2026, 1]; // data range
-const ymStr = (y, m) => y + "-" + String(m).padStart(2, "0");
-
-function applyPlayFilter() {
-  const [y, m] = playYM;
-  const cur = ymStr(y, m);
-  yrOut.textContent = MONTHS[m - 1] + " " + y;
-  const a0 = +areaMin.value;
-  // event visible only while it lasts: its [start,end] overlaps the current month
-  const f = ["all",
-    ["<=", ["slice", ["get", "sd"], 0, 7], cur],
-    [">=", ["slice", ["get", "ed"], 0, 7], cur],
-    [">=", ["get", "area"], a0]];
-  for (const lid of ["flood-fill", "flood-line"]) {
-    if (map.getLayer(lid)) map.setFilter(lid, f);
-  }
-  if (map.getLayer("flood-hex")) map.setFilter("flood-hex", ["==", ["get", "yr"], y]);
-}
 function stopPlay() {
-  if (playTimer) { clearInterval(playTimer); playTimer = null; }
-  if (playYM) { playYM = null; applyFilters(); }
-  playBtn.textContent = "\u25b6";
+  if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.innerHTML = "&#9654;"; }
 }
 playBtn.onclick = () => {
   if (playTimer) { stopPlay(); return; }
-  playYM = PLAY_START.slice();
-  applyPlayFilter();
-  playBtn.textContent = "\u23f8";
+  yrSlider.value = 1950; applyYear();
+  playBtn.innerHTML = "&#10074;&#10074;";
   playTimer = setInterval(() => {
-    let [y, m] = playYM;
-    m++;
-    if (m > 12) { m = 1; y++; }
-    if (y > PLAY_END[0] || (y === PLAY_END[0] && m > PLAY_END[1])) { stopPlay(); return; }
-    playYM = [y, m];
-    applyPlayFilter();
-  }, 150);
+    let y = +yrSlider.value + 1;
+    if (y > 2025) { stopPlay(); return; }
+    yrSlider.value = y; applyYear();
+  }, 200);
 };
 
+// ---- mode ----
+const modeVal = document.getElementById("modeVal");
+const modeAnom = document.getElementById("modeAnom");
+modeVal.onclick = () => { mode = "value"; modeVal.classList.add("active"); modeAnom.classList.remove("active"); restyle(); };
+modeAnom.onclick = () => { mode = "anomaly"; modeAnom.classList.add("active"); modeVal.classList.remove("active"); restyle(); };
+
 // ---- popup ----
-map.on("click", "flood-fill", (e) => {
+map.on("click", "grid", (e) => {
   const p = e.features[0].properties;
-  const d0 = new Date(p.sd), d1 = new Date(p.ed);
-  const dur = Math.round((d1 - d0) / 864e5) + 1;
-  new maplibregl.Popup()
-    .setLngLat(e.lngLat)
-    .setHTML("<b>Flood event</b><br>" +
-      "Start: " + p.sd + "<br>End: " + p.ed +
-      " (" + dur + " day" + (dur > 1 ? "s" : "") + ")<br>" +
-      "Area: " + Number(p.area).toLocaleString() + " km&sup2;")
-    .addTo(map);
+  const v = varMeta();
+  const anom = p.val - p.clim;
+  const s = anom > 0 ? "+" : "";
+  new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+    "<b>" + v.key + " " + p.yr + "</b><br>" +
+    "Value: " + fmt(p.val) + " " + v.unit + "<br>" +
+    "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
+    "Anomaly: " + s + fmt(anom) + " " + v.unit
+  ).addTo(map);
 });
-map.on("mouseenter", "flood-fill", () => map.getCanvas().style.cursor = "pointer");
-map.on("mouseleave", "flood-fill", () => map.getCanvas().style.cursor = "");
+map.on("mouseenter", "grid", () => map.getCanvas().style.cursor = "pointer");
+map.on("mouseleave", "grid", () => map.getCanvas().style.cursor = "");
 
-// ---- hex cell popup ----
-map.on("click", "flood-hex", (e) => {
-  const p = e.features[0].properties;
-  new maplibregl.Popup()
-    .setLngLat(e.lngLat)
-    .setHTML("<b>" + p.n + " flood events</b><br>" +
-      "in " + p.yr + ", per 0.25&deg; cell")
-    .addTo(map);
-});
-map.on("mouseenter", "flood-hex", () => map.getCanvas().style.cursor = "pointer");
-map.on("mouseleave", "flood-hex", () => map.getCanvas().style.cursor = "");
-
-// ---- year chart ----
-fetch("stats.json").then(r => r.json()).then(stats => {
-  const c = document.getElementById("yrChart");
-  const ctx = c.getContext("2d");
-  const W = c.width = c.offsetWidth * 2, H = c.height = 180;
-  const yrs = stats.by_year;
-  const mx = Math.max(...yrs.map(d => d.n));
-  const bw = W / yrs.length;
-  yrs.forEach((d, i) => {
-    const h = (d.n / mx) * (H - 24);
-    const t = (d.yr - 2000) / 26;
-    ctx.fillStyle = "rgb(" + Math.round(33 + t * 146) + "," +
-      Math.round(102 - t * 84) + "," + Math.round(172 - t * 138) + ")";
-    ctx.fillRect(i * bw + 1, H - 18 - h, bw - 2, h);
-  });
-  ctx.fillStyle = "#666"; ctx.font = "18px system-ui";
-  ctx.fillText("2000", 2, H - 2);
-  ctx.fillText("2026", W - 52, H - 2);
-  ctx.fillText(stats.total.toLocaleString() + " events", 2, 20);
-});
-
-// ---- minimize panel ----
+// ---- panel ----
+varSel.onchange = loadVariable;
 const minBtn = document.getElementById("minBtn");
 const panelBody = document.getElementById("panelBody");
 const infoBtn = document.getElementById("infoBtn");
@@ -321,14 +272,13 @@ minBtn.addEventListener("click", () => {
   panelBody.style.display = hidden ? "block" : "none";
   infoBtn.style.display = hidden ? "block" : "none";
   minBtn.innerHTML = hidden ? "&ndash;" : "+";
-  minBtn.title = hidden ? "Minimize panel" : "Expand panel";
 });
-
-// ---- info modal ----
 const modal = document.getElementById("infoModal");
-document.getElementById("infoBtn").onclick = () => modal.style.display = "block";
+infoBtn.onclick = () => modal.style.display = "block";
 document.getElementById("infoClose").onclick = () => modal.style.display = "none";
-modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+modal.addEventListener("click", (e) => { if (e.target === modal) modal.style.display = "none"; });
+
+map.on("load", () => { loadVariable(); });
 </script>
 </body>
 </html>
