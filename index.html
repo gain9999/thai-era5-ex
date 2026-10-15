@@ -268,20 +268,22 @@ function stopPlay() {
   if (playTimer) { clearInterval(playTimer); playTimer = null; playBtn.innerHTML = "&#9654;"; }
 }
 function updatePlayState() {
-  const single = (yrFrom === yrTo) && mode !== "fmean";
-  if (!single) stopPlay();
-  playBtn.disabled = !single;
-  playBtn.style.opacity = single ? 1 : 0.4;
+  const disabled = (mode === "fmean");
+  if (disabled) stopPlay();
+  playBtn.disabled = disabled;
+  playBtn.style.opacity = disabled ? 0.4 : 1;
 }
 playBtn.onclick = () => {
   if (playTimer) { stopPlay(); return; }
-  const y0 = yrFrom;
-  yrFromEl.value = y0; yrToEl.value = y0; applyRange();
+  // play single years 1950->2025 regardless of current range
+  yrFromEl.value = 1950; yrToEl.value = 1950;
+  applyRange();
   playBtn.innerHTML = "&#10074;&#10074;";
   playTimer = setInterval(() => {
     let y = yrTo + 1;
-    if (y > 2025) { stopPlay(); applyRange(); return; }
-    yrToEl.value = y; applyRange();
+    if (y > 2025) { stopPlay(); return; }
+    yrFromEl.value = y; yrToEl.value = y;
+    applyRange();
   }, 200);
 };
 
