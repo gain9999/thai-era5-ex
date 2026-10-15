@@ -323,6 +323,12 @@ modeFmean.onclick = () => setMode("fmean");
 function showPopup(e) {
   const p = e.features[0].properties;
   const v = varMeta();
+  // cell center from polygon geometry
+  const coords = e.features[0].geometry.coordinates[0];
+  let cx = 0, cy = 0;
+  coords.forEach(c => { cx += c[0]; cy += c[1]; });
+  cx /= coords.length; cy /= coords.length;
+  const ll = cx.toFixed(2) + "°E, " + cy.toFixed(2) + "°N";
   // single year or range mean, plus all-time max
   const y0 = playYear !== null ? playYear : yrFrom;
   const y1 = playYear !== null ? playYear : yrTo;
@@ -339,7 +345,7 @@ function showPopup(e) {
   const s = anom > 0 ? "+" : "";
   const label = single ? "Value" : "Mean";
   new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
-    "<b>" + v.key + " " + rangeLabel() + "</b><br>" +
+    "<b>" + v.key + " " + rangeLabel() + "</b> <span style='color:#666'>(" + ll + ")</span><br>" +
     label + ": " + fmt(val) + " " + v.unit + "<br>" +
     "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
     "Anomaly: " + s + fmt(anom) + " " + v.unit + "<br>" +
