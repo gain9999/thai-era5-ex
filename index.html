@@ -232,7 +232,7 @@ const yrSlider = document.getElementById("yrSlider");
 const yrOut = document.getElementById("yrOut");
 function applyYear() {
   curYear = +yrSlider.value;
-  yrOut.textContent = curYear;
+  if (mode !== "fmean") yrOut.textContent = curYear;
   restyle();
 }
 yrSlider.oninput = () => { stopPlay(); applyYear(); };
@@ -263,6 +263,12 @@ function setMode(m) {
   modeVal.classList.toggle("active", m === "value");
   modeAnom.classList.toggle("active", m === "anomaly");
   modeFmean.classList.toggle("active", m === "fmean");
+  const isFmean = (m === "fmean");
+  if (isFmean) stopPlay();
+  playBtn.disabled = isFmean;
+  yrSlider.disabled = isFmean;
+  playBtn.style.opacity = isFmean ? 0.4 : 1;
+  yrOut.textContent = isFmean ? "1950–2025" : curYear;
   restyle();
 }
 modeVal.onclick = () => setMode("value");
