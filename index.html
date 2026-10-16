@@ -322,9 +322,12 @@ function setMode(m) {
   modeVal.classList.toggle("active", m === "value");
   modeAnom.classList.toggle("active", m === "anomaly");
   modeFmean.classList.toggle("active", m === "fmean");
-  if (m === "fmean") {
+  const isFmean = (m === "fmean");
+  if (isFmean) {
     yrFromEl.value = 1950; yrToEl.value = 2025;
   }
+  yrFromEl.disabled = isFmean;
+  yrToEl.disabled = isFmean;
   applyRange();
 }
 modeVal.onclick = () => setMode("value");
