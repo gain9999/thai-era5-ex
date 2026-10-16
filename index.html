@@ -241,15 +241,16 @@ function loadVariable() {
   map.addLayer({ id: "grid_hi", type: "fill", source: "src_" + key, "source-layer": "grid",
     minzoom: 7, maxzoom: 22, paint: paint });
   updateExplain(); updateLegend(); applyRange();
-  // refresh open popup with the new variable's data
-  if (lastPopupLngLat) {
-    const ll = lastPopupLngLat;
-    map.once("idle", () => {
-      const pt = map.project(ll);
-      const feats = map.queryRenderedFeatures(pt, { layers: ["grid_lo", "grid_hi"] });
-      if (feats.length) showPopup({ lngLat: ll, features: [feats[0]] });
-    });
-  }
+  refreshPopup();
+}
+function refreshPopup() {
+  if (!lastPopupLngLat) return;
+  const ll = lastPopupLngLat;
+  map.once("idle", () => {
+    const pt = map.project(ll);
+    const feats = map.queryRenderedFeatures(pt, { layers: ["grid_lo", "grid_hi"] });
+    if (feats.length) showPopup({ lngLat: ll, features: [feats[0]] });
+  });
 }
 function restyle() {
   const p = paintFor(varMeta());
@@ -275,6 +276,8 @@ function applyRange() {
   yrToOut.textContent = yrTo;
   updatePlayState();
   restyle();
+  // refresh open popup with the new range (not while playing)
+  if (playYear === null) refreshPopup();
 }
 yrFromEl.oninput = () => { stopPlay(); applyRange(); };
 yrToEl.oninput = () => { stopPlay(); applyRange(); };
