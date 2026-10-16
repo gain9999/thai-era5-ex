@@ -381,8 +381,7 @@ function showPopup(e) {
   const popup = new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
     "<b>" + v.key + " " + rangeLabel() + "</b> <span style='color:#666'>(" + ll + ")</span><br>" +
     label + ": " + fmt(val) + " " + v.unit + "<br>" +
-    "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
-    "Anomaly: " + s + fmt(anom) + " " + v.unit + "<br>" +
+    "Anomaly: " + s + fmt(anom) + " " + v.unit + " (from 1991–2020)<br>" +
     "Max (1950–2025): " + fmt(mx) + " " + v.unit + " (" + mxY + ")" +
     "<svg id='tsChart' width='" + W + "' height='" + H + "' style='display:block;margin-top:6px;touch-action:none;cursor:ew-resize'>" +
     yticks +
