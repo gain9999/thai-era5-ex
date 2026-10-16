@@ -241,6 +241,15 @@ function loadVariable() {
   map.addLayer({ id: "grid_hi", type: "fill", source: "src_" + key, "source-layer": "grid",
     minzoom: 7, maxzoom: 22, paint: paint });
   updateExplain(); updateLegend(); applyRange();
+  // refresh open popup with the new variable's data
+  if (lastPopupLngLat) {
+    const ll = lastPopupLngLat;
+    map.once("idle", () => {
+      const pt = map.project(ll);
+      const feats = map.queryRenderedFeatures(pt, { layers: ["grid_lo", "grid_hi"] });
+      if (feats.length) showPopup({ lngLat: ll, features: [feats[0]] });
+    });
+  }
 }
 function restyle() {
   const p = paintFor(varMeta());
@@ -320,7 +329,9 @@ modeAnom.onclick = () => setMode("anomaly");
 modeFmean.onclick = () => setMode("fmean");
 
 // ---- popup ----
+let lastPopupLngLat = null;
 function showPopup(e) {
+  lastPopupLngLat = e.lngLat;
   const p = e.features[0].properties;
   const v = varMeta();
   // cell center from polygon geometry
@@ -346,15 +357,23 @@ function showPopup(e) {
   const anom = val != null ? val - p.clim : null;
   const s = anom > 0 ? "+" : "";
   const label = single ? "Value" : "Mean";
-  // timeseries SVG
-  const W = 260, H = 84, pad = 8;
+  // timeseries SVG with y-axis
+  const W = 280, H = 84, padL = 34, padR = 8, padT = 6, padB = 6;
   const tmin = Math.min.apply(null, tVals), tmax = Math.max.apply(null, tVals);
   const trange = (tmax - tmin) || 1;
-  const sx = i => pad + (i / (tVals.length - 1)) * (W - 2 * pad);
-  const sy = vv => H - pad - ((vv - tmin) / trange) * (H - 2 * pad);
+  const sx = i => padL + (i / (tVals.length - 1)) * (W - padL - padR);
+  const sy = vv => H - padB - ((vv - tmin) / trange) * (H - padT - padB);
   const pts = tVals.map((vv, i) => sx(i).toFixed(1) + "," + sy(vv).toFixed(1)).join(" ");
   let initIdx = tYears.indexOf(y0);
   if (initIdx < 0) initIdx = 0;
+  // y-axis ticks
+  let yticks = "";
+  for (let t = 0; t <= 3; t++) {
+    const vv = tmin + (trange * t / 3);
+    const yy = sy(vv).toFixed(1);
+    yticks += "<line x1='" + (padL - 4) + "' y1='" + yy + "' x2='" + padL + "' y2='" + yy + "' stroke='#999' stroke-width='1'/>" +
+      "<text x='" + (padL - 6) + "' y='" + (+yy + 3) + "' font-size='9' fill='#666' text-anchor='end'>" + fmt(vv) + "</text>";
+  }
   const popup = new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
     "<b>" + v.key + " " + rangeLabel() + "</b> <span style='color:#666'>(" + ll + ")</span><br>" +
     label + ": " + fmt(val) + " " + v.unit + "<br>" +
@@ -362,6 +381,7 @@ function showPopup(e) {
     "Anomaly: " + s + fmt(anom) + " " + v.unit + "<br>" +
     "Max (1950–2025): " + fmt(mx) + " " + v.unit + " (" + mxY + ")" +
     "<svg id='tsChart' width='" + W + "' height='" + H + "' style='display:block;margin-top:6px;touch-action:none;cursor:ew-resize'>" +
+    yticks +
     "<polyline points='" + pts + "' fill='none' stroke='#1d6fd1' stroke-width='1.5'/>" +
     "<line id='tsMark' x1='" + sx(initIdx).toFixed(1) + "' y1='0' x2='" + sx(initIdx).toFixed(1) + "' y2='" + H + "' stroke='#e31a1c' stroke-width='1.5'/>" +
     "<circle id='tsDot' cx='" + sx(initIdx).toFixed(1) + "' cy='" + sy(tVals[initIdx]).toFixed(1) + "' r='4' fill='#e31a1c'/>" +
@@ -382,13 +402,14 @@ function showPopup(e) {
   let dragging = false;
   function idxFromEv(ev) {
     const r = svg.getBoundingClientRect();
-    const frac = ((ev.clientX - r.left) - pad) / (W - 2 * pad);
+    const frac = ((ev.clientX - r.left) - padL) / (W - padL - padR);
     return Math.round(frac * (tVals.length - 1));
   }
   svg.addEventListener("pointerdown", ev => { dragging = true; setMarker(idxFromEv(ev)); try { svg.setPointerCapture(ev.pointerId); } catch (_) {} ev.preventDefault(); });
   svg.addEventListener("pointermove", ev => { if (dragging) setMarker(idxFromEv(ev)); });
   svg.addEventListener("pointerup", () => { dragging = false; });
   svg.addEventListener("pointercancel", () => { dragging = false; });
+  popup.on("close", () => { lastPopupLngLat = null; });
 }
 map.on("click", "grid_lo", showPopup);
 map.on("click", "grid_hi", showPopup);
