@@ -369,12 +369,13 @@ function showPopup(e) {
   const pts = tVals.map((vv, i) => sx(i).toFixed(1) + "," + sy(vv).toFixed(1)).join(" ");
   let initIdx = tYears.indexOf(y0);
   if (initIdx < 0) initIdx = 0;
-  // y-axis ticks
+  // y-axis ticks + horizontal gridlines
   let yticks = "";
   for (let t = 0; t <= 3; t++) {
     const vv = tmin + (trange * t / 3);
     const yy = sy(vv).toFixed(1);
-    yticks += "<line x1='" + (padL - 4) + "' y1='" + yy + "' x2='" + padL + "' y2='" + yy + "' stroke='#999' stroke-width='1'/>" +
+    yticks += "<line x1='" + padL + "' y1='" + yy + "' x2='" + (W - padR) + "' y2='" + yy + "' stroke='#ccc' stroke-width='1' opacity='0.6'/>" +
+      "<line x1='" + (padL - 4) + "' y1='" + yy + "' x2='" + padL + "' y2='" + yy + "' stroke='#999' stroke-width='1'/>" +
       "<text x='" + (padL - 6) + "' y='" + (+yy + 3) + "' font-size='9' fill='#666' text-anchor='end'>" + fmt(vv) + "</text>";
   }
   const popup = new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
