@@ -333,10 +333,12 @@ function showPopup(e) {
   const y0 = playYear !== null ? playYear : yrFrom;
   const y1 = playYear !== null ? playYear : yrTo;
   const single = (y0 === y1);
+  const tYears = [], tVals = [];
   let sum = 0, n = 0, mx = -Infinity, mxY = null;
   for (let y = 1950; y <= 2025; y++) {
     const val = p["y" + y];
     if (val == null) continue;
+    tYears.push(y); tVals.push(val);
     if (val > mx) { mx = val; mxY = y; }
     if (y >= y0 && y <= y1) { sum += val; n++; }
   }
@@ -344,13 +346,49 @@ function showPopup(e) {
   const anom = val != null ? val - p.clim : null;
   const s = anom > 0 ? "+" : "";
   const label = single ? "Value" : "Mean";
-  new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+  // timeseries SVG
+  const W = 260, H = 84, pad = 8;
+  const tmin = Math.min.apply(null, tVals), tmax = Math.max.apply(null, tVals);
+  const trange = (tmax - tmin) || 1;
+  const sx = i => pad + (i / (tVals.length - 1)) * (W - 2 * pad);
+  const sy = vv => H - pad - ((vv - tmin) / trange) * (H - 2 * pad);
+  const pts = tVals.map((vv, i) => sx(i).toFixed(1) + "," + sy(vv).toFixed(1)).join(" ");
+  let initIdx = tYears.indexOf(y0);
+  if (initIdx < 0) initIdx = 0;
+  const popup = new maplibregl.Popup({ maxWidth: "300px" }).setLngLat(e.lngLat).setHTML(
     "<b>" + v.key + " " + rangeLabel() + "</b> <span style='color:#666'>(" + ll + ")</span><br>" +
     label + ": " + fmt(val) + " " + v.unit + "<br>" +
     "1991–2020 mean: " + fmt(p.clim) + " " + v.unit + "<br>" +
     "Anomaly: " + s + fmt(anom) + " " + v.unit + "<br>" +
-    "Max (1950–2025): " + fmt(mx) + " " + v.unit + " (" + mxY + ")"
+    "Max (1950–2025): " + fmt(mx) + " " + v.unit + " (" + mxY + ")" +
+    "<svg id='tsChart' width='" + W + "' height='" + H + "' style='display:block;margin-top:6px;touch-action:none;cursor:ew-resize'>" +
+    "<polyline points='" + pts + "' fill='none' stroke='#1d6fd1' stroke-width='1.5'/>" +
+    "<line id='tsMark' x1='" + sx(initIdx).toFixed(1) + "' y1='0' x2='" + sx(initIdx).toFixed(1) + "' y2='" + H + "' stroke='#e31a1c' stroke-width='1.5'/>" +
+    "<circle id='tsDot' cx='" + sx(initIdx).toFixed(1) + "' cy='" + sy(tVals[initIdx]).toFixed(1) + "' r='4' fill='#e31a1c'/>" +
+    "</svg><div id='tsLabel' style='font-size:12px;text-align:center;font-weight:600'>" +
+    tYears[initIdx] + ": " + fmt(tVals[initIdx]) + " " + v.unit + "</div>"
   ).addTo(map);
+  // draggable marker
+  const el = popup.getElement();
+  const svg = el.querySelector("#tsChart"), mark = el.querySelector("#tsMark"),
+        dot = el.querySelector("#tsDot"), tlab = el.querySelector("#tsLabel");
+  function setMarker(idx) {
+    idx = Math.max(0, Math.min(tVals.length - 1, idx));
+    const xx = sx(idx).toFixed(1);
+    mark.setAttribute("x1", xx); mark.setAttribute("x2", xx);
+    dot.setAttribute("cx", xx); dot.setAttribute("cy", sy(tVals[idx]).toFixed(1));
+    tlab.textContent = tYears[idx] + ": " + fmt(tVals[idx]) + " " + v.unit;
+  }
+  let dragging = false;
+  function idxFromEv(ev) {
+    const r = svg.getBoundingClientRect();
+    const frac = ((ev.clientX - r.left) - pad) / (W - 2 * pad);
+    return Math.round(frac * (tVals.length - 1));
+  }
+  svg.addEventListener("pointerdown", ev => { dragging = true; setMarker(idxFromEv(ev)); try { svg.setPointerCapture(ev.pointerId); } catch (_) {} ev.preventDefault(); });
+  svg.addEventListener("pointermove", ev => { if (dragging) setMarker(idxFromEv(ev)); });
+  svg.addEventListener("pointerup", () => { dragging = false; });
+  svg.addEventListener("pointercancel", () => { dragging = false; });
 }
 map.on("click", "grid_lo", showPopup);
 map.on("click", "grid_hi", showPopup);
